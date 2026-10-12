@@ -27,14 +27,17 @@
       color: #000000;
       text-decoration: none;
       margin-bottom: 24px;
-      transition: color 0.2s ease;
+      transition: all 0.2s ease;
       font-weight: 500;
       background-color: #ffffff;
-      padding: 4px 0;
+      padding: 8px 16px;
+      border: 1px solid #E6E6E6;
+      border-radius: 4px;
     }
 
     .back-link:hover {
-      color: #111111;
+      background-color: #f5f5f5;
+      border-color: #d4d4d4;
     }
 
     /* Minimalist Card */
