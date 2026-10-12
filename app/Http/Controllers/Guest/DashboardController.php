@@ -41,6 +41,11 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        return view('guest.dashboard', compact('facilitiesStats', 'upcomingEvents'));
+        // Unread notifications count for the notification badge
+        $unreadNotificationsCount = \App\Models\Notification::where('user_id', $userId)
+            ->where('is_read', false)
+            ->count();
+
+        return view('guest.dashboard', compact('facilitiesStats', 'upcomingEvents', 'unreadNotificationsCount'));
     }
 }

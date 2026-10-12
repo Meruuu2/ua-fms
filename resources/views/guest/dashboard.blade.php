@@ -1,16 +1,30 @@
 @extends('layouts.guest')
 
 @section('content')
-    <div class="fms-card">
-        <div class="fms-page-header border-0 pb-0 mb-6">
-            <h1 class="fms-page-title">Guest Dashboard</h1>
+    <!-- Dashboard Topbar with Notifications and Logout -->
+    <div class="flex justify-between items-center border-b border-black pb-3 mb-6">
+        <h1 class="text-2xl font-semibold text-black">Guest Dashboard</h1>
+        <div class="flex items-center gap-4">
+            <a href="{{ route('notifications.index') }}" class="text-sm font-medium text-black hover:underline flex items-center gap-2">
+                Notifications
+                @if(isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)
+                    <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-black rounded-full">{{ $unreadNotificationsCount }}</span>
+                @endif
+            </a>
+            <form method="POST" action="{{ route('logout') }}" class="m-0 inline">
+                @csrf
+                <button type="submit" class="text-sm font-medium text-black hover:underline">Logout</button>
+            </form>
         </div>
+    </div>
+
+    <div class="fms-card">
         <p class="mb-6 text-sm text-neutral-600">
             Welcome to the Guest Portal. Submit facility requests with payment and track your reservations.
         </p>
 
-        <!-- Statistics Chart -->
-        <div class="grid grid-cols-1 gap-6 mb-8">
+        <!-- Statistics Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <!-- Facilities Requests Chart (3D Pie Chart) -->
             <div class="bg-neutral-50 border border-neutral-200 rounded-lg p-6">
                 <h3 class="text-base font-semibold mb-4">My Facilities Requests</h3>
@@ -23,53 +37,39 @@
             </div>
         </div>
 
-        <!-- Upcoming Events Section -->
-        @if($upcomingEvents->count() > 0)
-        <div class="mb-8">
-            <h2 class="mb-3 text-sm font-semibold uppercase tracking-widest text-neutral-500">Upcoming Events</h2>
-            <div class="bg-white border border-neutral-200 rounded-lg overflow-hidden">
-                <div class="divide-y divide-neutral-200">
+        <!-- UPCOMING EVENTS Section -->
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-widest text-neutral-500">Upcoming Events</h2>
+        <div class="mb-8 bg-neutral-50 border border-neutral-200 rounded-lg p-6">
+            @if($upcomingEvents->count() > 0)
+                <div class="space-y-4">
                     @foreach($upcomingEvents as $event)
-                    <div class="p-4 hover:bg-neutral-50 transition">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        {{ $event->start_time->format('M d, Y') }}
-                                    </span>
-                                    <span class="text-sm text-neutral-600">
-                                        {{ $event->start_time->format('h:i A') }} - {{ $event->end_time->format('h:i A') }}
-                                    </span>
-                                </div>
-                                <h4 class="text-sm font-semibold text-neutral-900 mb-1">
-                                    {{ $event->facilities->pluck('name')->join(', ') }}
-                                </h4>
-                                @if($event->purpose)
-                                <p class="text-sm text-neutral-600">{{ Str::limit($event->purpose, 100) }}</p>
-                                @endif
+                        <div class="flex justify-between items-start border-b border-neutral-200 pb-4 last:border-0 last:pb-0">
+                            <div>
+                                <p class="font-semibold text-black">{{ $event->start_time->format('M d, Y') }}</p>
+                                <p class="text-sm text-neutral-600">{{ $event->start_time->format('h:i A') }} - {{ $event->end_time->format('h:i A') }}</p>
+                                <p class="font-medium text-black mt-2">{{ strtoupper($event->facilities->first()->name ?? 'N/A') }}</p>
+                                <p class="text-sm text-neutral-600">{{ $event->purpose }}</p>
                             </div>
-                            <div class="ml-4 flex-shrink-0">
-                                @if($event->requester_id === auth()->id())
-                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                                    Your Booking
-                                </span>
-                                @endif
-                            </div>
+                            @if($event->requester_id == auth()->id())
+                                <span class="text-xs bg-black text-white px-2 py-1 rounded">Your Booking</span>
+                            @endif
                         </div>
-                    </div>
                     @endforeach
                 </div>
-                <div class="bg-neutral-50 px-4 py-3 text-center border-t border-neutral-200">
-                    <a href="{{ route('guest.bookings.calendar') }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">
-                        View Full Calendar →
-                    </a>
-                </div>
-            </div>
+                <a href="{{ route('guest.bookings.calendar') }}" class="mt-4 inline-block text-sm font-medium text-black hover:underline">
+                    View Full Calendar →
+                </a>
+            @else
+                <p class="text-sm text-neutral-600">No upcoming events scheduled.</p>
+            @endif
         </div>
-        @endif
 
         <h2 class="mb-3 text-sm font-semibold uppercase tracking-widest text-neutral-500">Quick access</h2>
-        <div class="fms-stat-grid">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <a href="{{ route('guest.rates') }}" class="fms-stat-card bg-blue-50 border-blue-200">
+                <h3>Venue Rates</h3>
+                <p>View official pricing and facilities packages</p>
+            </a>
             <a href="{{ route('guest.requests.facilities.create') }}" class="fms-stat-card">
                 <h3>New Request</h3>
                 <p>Submit a facility booking request with payment</p>

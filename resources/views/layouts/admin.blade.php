@@ -13,6 +13,7 @@
                 'heading' => 'Overview',
                 'links' => [
                     ['label' => 'Dashboard', 'route' => 'admin.dashboard'],
+                    ['label' => 'Monthly records', 'route' => 'admin.monthly-records.index'],
                 ],
             ],
             [

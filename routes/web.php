@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\FacilityController as AdminFacilityController;
 use App\Http\Controllers\Admin\FormSubmissionController as AdminFormSubmissionController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\MonthlyRecordsController as AdminMonthlyRecordsController;
 use App\Http\Controllers\College\DashboardController as CollegeDashboardController;
 use App\Http\Controllers\College\FacilityController as CollegeFacilityController;
 use App\Http\Controllers\College\FormController as CollegeFormController;
@@ -96,6 +97,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('admin.users.index');
     Route::get('/admin/users/create', [\App\Http\Controllers\Admin\UserController::class, 'create'])->name('admin.users.create');
     Route::post('/admin/users', [\App\Http\Controllers\Admin\UserController::class, 'store'])->name('admin.users.store');
+
+    // Monthly Records
+    Route::get('/admin/monthly-records', [AdminMonthlyRecordsController::class, 'index'])->name('admin.monthly-records.index');
 
     // Direct booking (GSU high-priority)
     Route::get('/admin/bookings/create-direct', [\App\Http\Controllers\Admin\BookingController::class, 'createDirect'])
@@ -211,6 +215,11 @@ Route::middleware(['auth', 'role:org_staff'])->group(function () {
 // Guest (External Users)
 Route::middleware(['auth', 'role:guest'])->group(function () {
     Route::get('/guest/dashboard', [GuestDashboardController::class, 'index'])->name('guest.dashboard');
+
+    // Venue Rates
+    Route::get('/guest/rates', function () {
+        return view('guest.rates');
+    })->name('guest.rates');
 
     // Bookings
     Route::get('/guest/bookings', [GuestBookingController::class, 'index'])

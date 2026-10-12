@@ -74,6 +74,10 @@ class AuthController extends Controller
             return redirect()->route('guest.dashboard');
         }
 
-        return redirect()->route('home');
+        // Fallback for invalid roles - log them out
+        Auth::logout();
+        return redirect()->route('login')->withErrors([
+            'email' => 'Invalid user role. Please contact an administrator.',
+        ]);
     }
 }

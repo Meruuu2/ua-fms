@@ -24,20 +24,22 @@
       display: inline-flex;
       align-items: center;
       font-size: 14px;
-      color: #000000;
+      color: #ffffff !important;
       text-decoration: none;
       margin-bottom: 24px;
       transition: all 0.2s ease;
       font-weight: 500;
-      background-color: #ffffff;
+      background-color: #ffffff !important;
       padding: 8px 16px;
       border: 1px solid #E6E6E6;
       border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
     }
 
     .back-link:hover {
-      background-color: #f5f5f5;
+      background-color: #f9f9f9 !important;
       border-color: #d4d4d4;
+      color: #ffffff !important;
     }
 
     /* Minimalist Card */
