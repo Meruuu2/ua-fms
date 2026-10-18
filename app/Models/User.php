@@ -19,12 +19,14 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'contact_number',
         'email',
         'password',
         'role',
         'college_name',
         'college_id',
         'organization_name',
+        'position',
     ];
 
     /**
@@ -68,6 +70,27 @@ class User extends Authenticatable
     public function isGuest(): bool
     {
         return $this->role === 'guest';
+    }
+
+    /**
+     * Ids of the college staff accounts in this user's college (including this user).
+     * Repair tickets are shared within a college. No college set: only this user.
+     */
+    public function collegeTeamIds(): array
+    {
+        if (! $this->isCollegeStaff() || (! $this->college_id && ! $this->college_name)) {
+            return [$this->id];
+        }
+
+        return static::where('role', 'college_staff')
+            ->where(fn ($q) => $this->college_id
+                ? $q->where('college_id', $this->college_id)
+                : $q->where('college_name', $this->college_name))
+            ->pluck('id')
+            ->push($this->id)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function bookings()

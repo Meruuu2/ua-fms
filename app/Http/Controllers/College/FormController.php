@@ -8,6 +8,7 @@ use App\Http\Requests\StoreFacilitiesUtilizationRequest;
 use App\Models\Facility;
 use App\Models\FormSubmission;
 use App\Models\Signatory;
+use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -63,7 +64,7 @@ class FormController extends Controller
             'user',
             'deans',
             'programHeads'
-        ));
+        ) + ['teamSignatories' => $this->teamSignatories()]);
 
     }
 
@@ -82,7 +83,10 @@ class FormController extends Controller
         $notedName = null;
         if ($request->filled('noted_signatory_id') && $request->input('noted_signatory_id') !== 'custom') {
             [$type, $id] = explode(':', $request->input('noted_signatory_id')) + [null, null];
-            if ($id) {
+            if ($id && $type === 'user') {
+                // A member of the college's team (Users page) who holds a position
+                $notedName = $this->teamSignatories()->firstWhere('id', (int) $id)?->name;
+            } elseif ($id) {
                 $signatory = Signatory::find($id);
                 if ($signatory) {
                     $notedName = $signatory->name;
@@ -110,6 +114,26 @@ class FormController extends Controller
         }
 
         return $response;
+    }
+
+    /**
+     * "Noted by" choices from the college's own team (Users page): accounts with a position, Dean first.
+     */
+    protected function teamSignatories()
+    {
+        $user = Auth::user();
+        $rank = ['dean' => 0, 'program head' => 1];
+
+        return User::where('role', 'college_staff')
+            ->where(fn ($q) => $user->college_id
+                ? $q->where('college_id', $user->college_id)
+                : $q->where('college_name', $user->college_name))
+            ->whereNotNull('position')
+            ->where('position', '!=', '')
+            ->orderBy('name')
+            ->get(['id', 'name', 'position'])
+            ->sortBy(fn ($u) => $rank[strtolower(trim($u->position))] ?? 9)
+            ->values();
     }
 
     protected function requesterType(): string

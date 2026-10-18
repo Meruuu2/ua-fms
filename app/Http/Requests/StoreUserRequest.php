@@ -15,11 +15,20 @@ class StoreUserRequest extends FormRequest
     {
         return [
             'name'              => 'required|string|max:255',
+            'contact_number'    => ['nullable', 'string', 'regex:/^\d{4}-?\d{3}-?\d{4}$/'],
             'email'             => 'required|email|unique:users,email',
             'password'          => 'required|string|min:8|confirmed',
             'role'              => 'required|in:admin,college_staff,org_staff,guest',
             'college_name'      => 'nullable|string|max:255',
             'organization_name' => 'nullable|string|max:255',
+            'position'          => 'nullable|string|max:120',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'contact_number.regex' => 'Enter an 11-digit contact number in the format 09xx-xxx-xxxx.',
         ];
     }
 }

@@ -42,6 +42,27 @@ It now creates the following accounts:
 
 It also still creates one generic test user via `User::factory()` and the official facilities list via `FacilitySeeder`.
 
+> **Note (2026-10-19):** most of these sample accounts were deleted from the local database through Admin → Users. Admin A is still there but its email was changed to `adminA@gsuadmin.com` (see 1b). Deleting an account also deletes its bookings, requests and repair tickets. Run `php artisan db:seed` to bring the sample accounts back (their old records are not restored).
+
+---
+
+## 1b. Accounts created in the app (local database)
+
+Created or edited through the portals, not by the seeder. Each portal only accepts its own accounts: use the matching card on the home page (Admin / College Staff / Org Unit). Last checked against the local database on 2026-10-19.
+
+### Admins (Admin team)
+- `adminA@gsuadmin.com` / `password123` → AdminA, position `GSU Head`, contact `0990-990-9090` *(seeded as `adminA@example.com`; email changed in the app)*
+- `garcia@gsustaff.com` / `password123` → Garcia, position `Staff`, contact `0909-999-9099`
+
+### College staff
+- `jcamar@ccisdean.com` / `password123` → John C. Amar, `college_name = "CCIS Dean"`, contact `0909-090-9090`
+
+### Org staff
+- `geoyanga@ccisprovincial.com` / `ccis2026` → Geo Yanga, `organization_name = "CCIS Provincial"`, contact `0909-991-3450` *(password was set by whoever created it; it is not `password123`)*
+
+### System account (do not use or delete)
+- `walk-in-guest@ua-fms.local` → Walk-in Guest. Holds every walk-in guest request; it does not sign in.
+
 ---
 
 ## 2. Legacy helper routes

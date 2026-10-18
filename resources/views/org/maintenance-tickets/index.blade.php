@@ -1,45 +1,81 @@
 @extends('layouts.org')
 
 @section('org-content')
-<div class="fms-card">
-    <div class="fms-page-header">
+@include('layouts.partials.page-kit')
+@php
+    $ticketTone = fn ($s) => match ($s) {
+        'pending' => 'is-warn',
+        'ongoing', 'in_progress' => 'is-info',
+        'success', 'completed' => 'is-good',
+        'failed', 'rejected' => 'is-bad',
+        default => 'is-neutral',
+    };
+@endphp
+
+<div class="pk-page">
+    <section class="pk-hero" style="--pk-img: url('{{ asset('img/facilities/new-avr.jpg') }}')">
         <div>
-            <h1 class="fms-page-title">Repair &amp; maintenance requests</h1>
-            <p class="text-sm text-neutral-600">Track requests sent to the administrators.</p>
+            <p class="pk-eyebrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4 2.5-2.5z"/></svg>
+                Repair &amp; maintenance
+            </p>
+            <h1>Repair &amp; maintenance requests</h1>
+            <p class="pk-hero-sub">Track requests sent to the administrators.</p>
         </div>
-        <a href="{{ route('org.maintenance-tickets.create') }}" class="fms-btn-primary">New request</a>
-    </div>
+        <div class="pk-hero-actions">
+            <div class="pk-stat is-dark pk-stat--glass pk-stat--hero u-minw-140">
+                <div>
+                    <p class="pk-stat-label u-mb-6">Tickets sent</p>
+                    <p class="pk-stat-value">{{ $tickets->total() }}</p>
+                </div>
+            </div>
+            <a href="{{ route('org.maintenance-tickets.create') }}" class="pk-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                New request
+            </a>
+        </div>
+    </section>
 
     @if ($tickets->isNotEmpty())
-        <div class="fms-table-wrap">
-            <table class="fms-table">
-                <thead>
-                    <tr>
-                        <th>Tracking code</th>
-                        <th>Subject</th>
-                        <th>Facility</th>
-                        <th>Status</th>
-                        <th>Sent</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($tickets as $ticket)
-                        <tr>
-                            <td><strong>{{ $ticket->ticket_code }}</strong></td>
-                            <td>{{ $ticket->subject }}</td>
-                            <td>{{ $ticket->facility?->name ?? 'Facility removed' }}</td>
-                            <td><span class="fms-badge">{{ ucfirst($ticket->status) }}</span></td>
-                            <td>{{ $ticket->requested_at?->format('M d, Y') ?? $ticket->created_at->format('M d, Y') }}</td>
-                            <td><a href="{{ route('org.maintenance-tickets.show', $ticket) }}" class="fms-link">View</a></td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+        <div class="pk-section-head">
+            <h2 class="pk-section-title">My tickets</h2>
+            <span class="pk-section-meta">Showing {{ $tickets->firstItem() }}–{{ $tickets->lastItem() }} of {{ $tickets->total() }}</span>
         </div>
-        {{ $tickets->links() }}
+        <div class="ctk-grid">
+            @foreach ($tickets as $ticket)
+                @php $closed = in_array($ticket->status, ['success', 'failed', 'completed', 'rejected'], true); @endphp
+                <article class="ctk {{ $closed ? 'is-closed' : '' }}">
+                    <div class="ctk-stub">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3a2 2 0 000-4z"/></svg>
+                        <span class="ctk-code">{{ $ticket->ticket_code }}</span>
+                    </div>
+                    <div class="ctk-body">
+                        <div class="ctk-top">
+                            <p class="ctk-subject">{{ $ticket->subject }}</p>
+                            <span class="pk-pill {{ $ticketTone($ticket->status) }}">{{ ucfirst($ticket->status) }}</span>
+                        </div>
+                        <p class="ctk-meta">
+                            <span class="{{ $ticket->facility ? '' : 'is-removed' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14"/></svg>{{ $ticket->facility?->name ?? 'Facility removed' }}</span>
+                            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>Sent {{ $ticket->requested_at?->format('M d, Y') ?? $ticket->created_at->format('M d, Y') }}</span>
+                        </p>
+                        <div class="ctk-foot">
+                            <a href="{{ route('org.maintenance-tickets.show', $ticket) }}" class="pk-row-link">
+                                View
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            @endforeach
+        </div>
+        <div class="pk-pagination">{{ $tickets->links() }}</div>
     @else
-        <p class="py-10 text-center text-neutral-600">You have not sent any repair or maintenance requests.</p>
+        <div class="pk-empty">
+            <span class="pk-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4 2.5-2.5z"/></svg></span>
+            <h3>No repair requests yet</h3>
+            <p>You have not sent any repair or maintenance requests.</p>
+            <a href="{{ route('org.maintenance-tickets.create') }}" class="pk-btn u-mt-6">Report a repair</a>
+        </div>
     @endif
 </div>
 @endsection

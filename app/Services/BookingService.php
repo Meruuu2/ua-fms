@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Facility;
 use App\Models\FormSubmission;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class BookingService
 {
@@ -47,15 +48,28 @@ class BookingService
             return "Facility is currently {$facility->availability_status} and cannot be booked.";
         }
 
-        $startDateTime = Carbon::parse($dateActivity . ' ' . $timeRange['start']);
-        $endDateTime   = Carbon::parse($dateActivity . ' ' . $timeRange['end']);
-
-        if ($endDateTime->lessThanOrEqualTo($startDateTime)) {
-            return 'End time must be after start time.';
+        // One booking per day: a single-day request has one day; a multi-day request (payload date_end) has several
+        $lastDay = !empty($payload['date_end']) ? $payload['date_end'] : $dateActivity;
+        if (Carbon::parse($lastDay)->lessThan(Carbon::parse($dateActivity))) {
+            return 'The end date of the event is before its start date.';
         }
 
-        if ($this->hasOverlap($facility->id, $startDateTime, $endDateTime)) {
-            return 'This facility is already booked at the requested time.';
+        $slots = [];
+        for ($day = Carbon::parse($dateActivity); $day->lessThanOrEqualTo(Carbon::parse($lastDay)); $day->addDay()) {
+            $slotStart = Carbon::parse($day->toDateString() . ' ' . $timeRange['start']);
+            $slotEnd   = Carbon::parse($day->toDateString() . ' ' . $timeRange['end']);
+
+            if ($slotEnd->lessThanOrEqualTo($slotStart)) {
+                return 'End time must be after start time.';
+            }
+
+            if ($this->hasOverlap($facility->id, $slotStart, $slotEnd)) {
+                return count($slots) === 0 && $lastDay === $dateActivity
+                    ? 'This facility is already booked at the requested time.'
+                    : 'This facility is already booked on ' . $day->format('M d, Y') . ' at the requested time.';
+            }
+
+            $slots[] = [$slotStart, $slotEnd];
         }
 
         $requester = $submission->requester;
@@ -63,25 +77,43 @@ class BookingService
             return 'Requester account not found.';
         }
 
-        $booking = Booking::create([
-            'requester_id'       => $requester->id,
-            'start_time'         => $startDateTime,
-            'end_time'           => $endDateTime,
-            'requester_type'     => $submission->requester_type,
-            'requester_unit'     => $submission->requester_unit,
-            'status'             => 'reserved',
-            'request_method'     => 'online_form',
-            'purpose'            => $payload['purpose'] ?? null,
-            'additional_details' => [
-                'form_submission_id' => $submission->id,
-                'equipment'          => $payload['equipment'] ?? [],
-            ],
-            'requested_at'       => $payload['date_request'] ?? now(),
-            'approved_at'        => now(),
-            'booking_code'       => 'BKG-' . now()->format('YmdHis') . '-' . $facility->id,
-        ]);
+        $baseCode  = 'BKG-' . now()->format('YmdHis') . '-' . $facility->id;
+        $dayCount  = count($slots);
 
-        $booking->facilities()->attach($facility->id);
+        // All days are booked together or not at all
+        $booking = DB::transaction(function () use ($slots, $dayCount, $baseCode, $requester, $submission, $payload, $facility) {
+            $first = null;
+            foreach ($slots as $i => [$slotStart, $slotEnd]) {
+                $details = [
+                    'form_submission_id' => $submission->id,
+                    'equipment'          => $payload['equipment'] ?? [],
+                ];
+                if ($dayCount > 1) {
+                    $details['multi_day'] = ['day' => $i + 1, 'of' => $dayCount];
+                }
+
+                $created = Booking::create([
+                    'requester_id'       => $requester->id,
+                    'start_time'         => $slotStart,
+                    'end_time'           => $slotEnd,
+                    'requester_type'     => $submission->requester_type,
+                    'requester_unit'     => $submission->requester_unit,
+                    'status'             => 'reserved',
+                    'request_method'     => 'online_form',
+                    'purpose'            => $payload['purpose'] ?? null,
+                    'additional_details' => $details,
+                    'requested_at'       => $payload['date_request'] ?? now(),
+                    'approved_at'        => now(),
+                    // Day 1 keeps the usual code; later days get a -D2, -D3 ... suffix
+                    'booking_code'       => $i === 0 ? $baseCode : $baseCode . '-D' . ($i + 1),
+                ]);
+
+                $created->facilities()->attach($facility->id);
+                $first ??= $created;
+            }
+
+            return $first;
+        });
 
         $submission->markBooked();
 

@@ -1,121 +1,152 @@
 @extends('layouts.admin')
 
 @section('admin-content')
-<div class="bg-white rounded shadow p-6">
-    <div class="flex justify-between items-center mb-4">
-        <div>
-            <h1 class="text-2xl font-semibold">Utilization Request Approvals</h1>
-            <p class="text-xs text-gray-500 mt-1">Review and approve facilities  Approve Requests from colleges and organizations</p>
-        </div>
-    </div>
+@include('layouts.partials.page-kit')
+@php
+    $statusTabs = [
+        ''            => 'All',
+        'pending'     => 'Pending',
+        'approved'    => 'Approved',
+        'reserved'    => 'Reserved',
+        'cancelled'   => 'Cancelled',
+        'disapproved' => 'Disapproved',
+    ];
+    $statusTone = fn ($s) => match ($s) {
+        'pending'     => 'is-warn',
+        'reserved'    => 'is-info',
+        'approved'    => 'is-good',
+        'disapproved' => 'is-bad',
+        default       => 'is-neutral',
+    };
+    $currentStatus = (string) request('status', '');
+    $hasFilters = request()->filled('search') || request()->filled('facility_id') || request()->filled('month') || $currentStatus !== '';
+@endphp
 
-    @if(session('status'))
-        <div class="mb-4 p-3 bg-green-50 text-green-800 border border-green-200 rounded">
-            {{ session('status') }}
+<div class="pk-page">
+    <section class="pk-hero" style="--pk-img: url('{{ asset('img/facilities/grand-stand.jpg') }}')">
+        <div>
+            <p class="pk-eyebrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                Requests
+            </p>
+            <h1>All Requests</h1>
+            <p class="pk-hero-sub">Review and approve facility requests from colleges and organizations.</p>
         </div>
-    @endif
+        <div class="pk-stat is-dark pk-stat--glass u-minw-180">
+            <div>
+                <p class="pk-stat-label">{{ $hasFilters ? 'Matching requests' : 'Total requests' }}</p>
+                <p class="pk-stat-value">{{ $submissions->total() }}</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick status tabs (same ?status= filter as the form below) -->
+    <nav class="appr-tabs" aria-label="Filter by status">
+        @foreach ($statusTabs as $value => $label)
+            @php $params = array_filter(array_merge(request()->except(['status', 'page']), ['status' => $value]), fn ($v) => $v !== '' && $v !== null); @endphp
+            <a href="{{ route('admin.forms.facilities.index', $params) }}"
+               class="appr-tab {{ $currentStatus === $value ? 'is-active' : '' }}"
+               @if ($currentStatus === $value) aria-current="page" @endif>{{ $label }}</a>
+        @endforeach
+    </nav>
 
     <!-- Filter Form -->
-    <form method="GET" action="{{ route('admin.forms.facilities.index') }}" class="mb-6 p-4 bg-gray-50 rounded">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-            <!-- Search by Control Number -->
-            <div>
-                <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Control Number</label>
-                <input 
-                    type="text" 
-                    id="search" 
-                    name="search" 
-                    class="w-full px-3 py-2 border border-gray-300 rounded text-sm" 
-                    placeholder="BKG-123..." 
-                    value="{{ request('search') }}"
-                />
+    <form method="GET" action="{{ route('admin.forms.facilities.index') }}" class="appr-filter">
+        <!-- Search by Control Number -->
+        <div class="pk-field">
+            <label for="search" class="pk-label">Control Number</label>
+            <div class="appr-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                <input type="text" id="search" name="search" class="pk-input" placeholder="BKG-123..." value="{{ request('search') }}" />
             </div>
+        </div>
 
-            <!-- Status Filter -->
-            <div>
-                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select id="status" name="status" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
-                    <option value="">All Statuses</option>
-                    <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
-                    <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
-                    <option value="reserved" {{ request('status') === 'reserved' ? 'selected' : '' }}>Reserved</option>
-                    <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                    <option value="disapproved" {{ request('status') === 'disapproved' ? 'selected' : '' }}>Disapproved</option>
-                </select>
-            </div>
+        <!-- Status Filter -->
+        <div class="pk-field">
+            <label for="status" class="pk-label">Status</label>
+            <select id="status" name="status" class="pk-input">
+                <option value="">All Statuses</option>
+                <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
+                <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
+                <option value="reserved" {{ request('status') === 'reserved' ? 'selected' : '' }}>Reserved</option>
+                <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                <option value="disapproved" {{ request('status') === 'disapproved' ? 'selected' : '' }}>Disapproved</option>
+            </select>
+        </div>
 
-            <!-- Facility Filter -->
-            <div>
-                <label for="facility_id" class="block text-sm font-medium text-gray-700 mb-1">Facility</label>
-                <select id="facility_id" name="facility_id" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
-                    <option value="">All Facilities</option>
-                    @foreach ($facilities as $facility)
-                        <option value="{{ $facility->id }}" {{ request('facility_id') == $facility->id ? 'selected' : '' }}>
-                            {{ $facility->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+        <!-- Facility Filter -->
+        <div class="pk-field">
+            <label for="facility_id" class="pk-label">Facility</label>
+            <select id="facility_id" name="facility_id" class="pk-input">
+                <option value="">All Facilities</option>
+                @foreach ($facilities as $facility)
+                    <option value="{{ $facility->id }}" {{ request('facility_id') == $facility->id ? 'selected' : '' }}>
+                        {{ $facility->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
 
-            <!-- Month Filter -->
-            <div>
-                <label for="month" class="block text-sm font-medium text-gray-700 mb-1">Activity Month</label>
-                <input 
-                    type="month" 
-                    id="month" 
-                    name="month" 
-                    class="w-full px-3 py-2 border border-gray-300 rounded text-sm" 
-                    value="{{ request('month') }}"
-                />
-            </div>
+        <!-- Month Filter -->
+        <div class="pk-field">
+            <label for="month" class="pk-label">Activity Month</label>
+            <input type="month" id="month" name="month" class="pk-input" value="{{ request('month') }}" />
+        </div>
 
-            <!-- Action Buttons -->
-            <div class="flex items-end gap-2">
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Filter</button>
-                <a href="{{ route('admin.forms.facilities.index') }}" class="px-4 py-2 bg-gray-400 text-white text-sm rounded hover:bg-gray-500">Clear</a>
-            </div>
+        <!-- Action Buttons -->
+        <div class="appr-filter-actions">
+            <button type="submit" class="pk-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
+                Filter
+            </button>
+            <a href="{{ route('admin.forms.facilities.index') }}" class="pk-btn-outline">Clear</a>
         </div>
     </form>
 
+    <div class="pk-section-head">
+        <h2 class="pk-section-title">Requests</h2>
+        @if ($submissions->count() > 0)
+            <span class="pk-section-meta">Showing {{ $submissions->firstItem() }}–{{ $submissions->lastItem() }} of {{ $submissions->total() }}</span>
+        @endif
+    </div>
+
     @if($submissions->count() > 0)
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50">
+        <div class="pk-table-wrap">
+            <table class="pk-table">
+                <thead>
                     <tr>
-                        <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Control No.</th>
-                        <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Requester</th>
-                        <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                        <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
-                        <th class="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th>Control No.</th>
+                        <th>Requester</th>
+                        <th>Unit</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th><span class="pk-sr">Actions</span></th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody>
                     @foreach($submissions as $submission)
+                        @php
+                            // Walk-in guests share one system account; their own name is saved with the request
+                            $requesterName = ($submission->payload['client_name'] ?? null) ?: (optional($submission->requester)->name ?? 'Unknown');
+                            $initials = collect(preg_split('/\s+/', trim($requesterName)))->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('');
+                        @endphp
                         <tr>
-                            <td class="px-4 py-2">{{ $submission->payload['control_no'] ?? 'Pending' }}</td>
-                            <td class="px-4 py-2">
-                                {{ optional($submission->requester)->name ?? 'Unknown' }}
-                            </td>
-                            <td class="px-4 py-2">
-                                {{ $submission->requester_unit ?? '-' }}
-                            </td>
-                            <td class="px-4 py-2">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-@if($submission->status === 'pending') bg-yellow-100 text-yellow-800
-                                    @elseif($submission->status === 'reserved') bg-blue-100 text-blue-800
-                                    @elseif($submission->status === 'approved') bg-green-100 text-green-800
-                                    @elseif($submission->status === 'disapproved') bg-red-100 text-red-800
-                                    @else bg-gray-100 text-gray-800 @endif">
-{{ $submission->status === 'reserved' ? 'Reserved' : ucfirst($submission->status) }}
+                            <td><span class="pk-code">{{ $submission->payload['control_no'] ?? 'Pending' }}</span></td>
+                            <td>
+                                <span class="pk-person">
+                                    <span class="pk-avatar" aria-hidden="true">{{ $initials ?: '?' }}</span>
+                                    <span class="pk-strong">{{ $requesterName }}</span>
                                 </span>
                             </td>
-                            <td class="px-4 py-2">
-                                {{ $submission->created_at?->format('Y-m-d H:i') ?? '-' }}
+                            <td>{{ $submission->requester_unit ?? '-' }}</td>
+                            <td>
+                                <span class="pk-pill {{ $statusTone($submission->status) }}">{{ $submission->status === 'reserved' ? 'Reserved' : ucfirst($submission->status) }}</span>
                             </td>
-                            <td class="px-4 py-2">
-                                <a href="{{ route('admin.forms.facilities.show', $submission) }}" class="text-blue-600 hover:text-blue-900">
+                            <td class="pk-nowrap">{{ $submission->created_at?->format('Y-m-d H:i') ?? '-' }}</td>
+                            <td>
+                                <a href="{{ route('admin.forms.facilities.show', $submission) }}" class="pk-row-link">
                                     View
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
                                 </a>
                             </td>
                         </tr>
@@ -124,11 +155,15 @@
             </table>
         </div>
 
-        <div class="mt-4">
+        <div class="pk-pagination">
             {{ $submissions->links() }}
         </div>
     @else
-        <p class="text-gray-600">No facilities  Approve Requests found.</p>
+        <div class="pk-empty">
+            <span class="pk-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>
+            <h3>No requests found</h3>
+            <p>{{ $hasFilters ? 'Nothing matches these filters. Try clearing them.' : 'New facility requests will appear here.' }}</p>
+        </div>
     @endif
 </div>
 @endsection

@@ -1,232 +1,89 @@
 @extends('layouts.guest')
 
-@section('content')
-<div class="bg-white rounded shadow p-8 max-w-7xl mx-auto">
-    <!-- Back Button -->
-    <div class="mb-4">
-        <a href="{{ route('guest.dashboard') }}" class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm font-medium transition">
-            ← Back to Dashboard
-        </a>
+@section('guest-content')
+@include('layouts.partials.page-kit')
+@php
+    $venues = include resource_path('views/public/venue-rates.php');
+    // Split "PhP 15,000.00/day" into amount + unit for the price display
+    $splitRate = function ($rate) {
+        $rest = trim(preg_replace('/^PhP\s*/', '', $rate));
+        $parts = explode('/', $rest, 2);
+        return ['amount' => $parts[0], 'unit' => isset($parts[1]) ? '/ ' . $parts[1] : 'per use'];
+    };
+@endphp
+
+<div class="pk-page">
+    <section class="pk-hero" style="--pk-img: url('{{ asset('img/facilities/paghiusa-hall.jpg') }}')">
+        <div>
+            <p class="pk-eyebrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
+                University of Antique · General Services Unit
+            </p>
+            <h1>Venues/Facilities &amp; Rentals</h1>
+            <p class="pk-hero-sub">Official rates and packages for renting University venues.</p>
+        </div>
+        <div class="pk-hero-actions">
+            <a href="{{ route('guest.requests.facilities.create') }}" class="pk-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                Book a Facility Now
+            </a>
+        </div>
+    </section>
+
+    <div class="pk-section-head">
+        <h2 class="pk-section-title">Venues</h2>
+        <span class="pk-section-meta">{{ count($venues) }} venues</span>
     </div>
-
-    <!-- Header -->
-    <div class="text-center mb-8 border-b-2 border-black pb-6">
-        <h1 class="text-3xl font-bold text-black mb-2">University of Antique</h1>
-        <h2 class="text-xl font-semibold text-gray-700">GENERAL SERVICES UNIT</h2>
-        <p class="text-lg text-gray-600 mt-2">Venues/Facilities & Rentals</p>
-    </div>
-
-    <!-- Rates Table -->
-    <div class="overflow-x-auto mb-8">
-        <table class="w-full border-2 border-black text-sm">
-            <thead>
-                <tr class="bg-gray-900 text-white">
-                    <th class="border border-black px-4 py-3 text-left font-semibold">Venue</th>
-                    <th class="border border-black px-4 py-3 text-left font-semibold">Capacity</th>
-                    <th class="border border-black px-4 py-3 text-left font-semibold">Rate</th>
-                    <th class="border border-black px-4 py-3 text-left font-semibold">Facilities Provided/Package</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- PaghiUsA Hall -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">PaghiUsA Hall</td>
-                    <td class="border border-black px-4 py-3">500-600 persons</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 15,000.00</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>Fully Airconditioned w/sounds</li>
-                            <li>700 monoblock chairs</li>
-                            <li>10 wooden long tables</li>
-                            <li>4 Industrial Fan</li>
-                            <li>Maximum of 8hrs.</li>
-                        </ul>
-                    </td>
-                </tr>
-
-                <!-- bUsAlian Hall -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">bUsAlian Hall</td>
-                    <td class="border border-black px-4 py-3">70-80 persons</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 10,000.00</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>Fully Airconditioned</li>
-                            <li>90 monoblock chairs</li>
-                            <li>2 wooden long tables</li>
-                            <li>Maximum of 8hrs.</li>
-                        </ul>
-                    </td>
-                </tr>
-
-                <!-- TiripUnAn Hall -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">TiripUnAn Hall</td>
-                    <td class="border border-black px-4 py-3">500-600 persons</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 8,000.00</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>600 monoblock chairs</li>
-                            <li>4 wooden long tables</li>
-                            <li>4 Industrial Fan</li>
-                            <li>Maximum of 8hrs.</li>
-                        </ul>
-                    </td>
-                </tr>
-
-                <!-- Balay ni jUAn -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">Balay ni jUAn</td>
-                    <td class="border border-black px-4 py-3">50-60 persons</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 8,000.00</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>Fully Airconditioned</li>
-                            <li>60 monoblock chairs</li>
-                            <li>2 wooden long tables</li>
-                            <li>Maximum of 8hrs.</li>
-                        </ul>
-                    </td>
-                </tr>
-
-                <!-- E-Hub -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">E-Hub</td>
-                    <td class="border border-black px-4 py-3">100-150 persons</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 5,000.00</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>Fully Airconditioned</li>
-                            <li>150 monoblock chairs</li>
-                            <li>4 wooden long tables</li>
-                            <li>Maximum of 8hrs.</li>
-                        </ul>
-                    </td>
-                </tr>
-
-                <!-- New AVR -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">New AVR</td>
-                    <td class="border border-black px-4 py-3">80-100 persons</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 5,000.00</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>Fully Airconditioned</li>
-                            <li>100 monoblock chairs</li>
-                            <li>4 wooden long tables</li>
-                            <li>Maximum of 8hrs.</li>
-                        </ul>
-                    </td>
-                </tr>
-
-                <!-- CEA AVR -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">CEA AVR</td>
-                    <td class="border border-black px-4 py-3">60-80 persons</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 2,000.00</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>80 monoblock chairs</li>
-                            <li>2 square plastic tables</li>
-                            <li>2 Industrial Fan</li>
-                            <li>Maximum of 8hrs.</li>
-                        </ul>
-                    </td>
-                </tr>
-
-                <!-- CCS AVR -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">CCS AVR</td>
-                    <td class="border border-black px-4 py-3">60-80 persons</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 2,000.00</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>80 monoblock chairs</li>
-                            <li>2 square plastic tables</li>
-                            <li>2 Industrial Fan</li>
-                            <li>Maximum of 8hrs.</li>
-                        </ul>
-                    </td>
-                </tr>
-
-                <!-- CBA AVR -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">CBA AVR</td>
-                    <td class="border border-black px-4 py-3">60-80 persons</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 2,000.00</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>80 monoblock chairs</li>
-                            <li>2 square plastic tables</li>
-                            <li>2 Industrial Fan</li>
-                            <li>Maximum of 8hrs.</li>
-                        </ul>
-                    </td>
-                </tr>
-
-                <!-- Class Room/s -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">Class Room/s</td>
-                    <td class="border border-black px-4 py-3">25-30 persons/room</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 50.00/head in a day</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>Ceiling Fan</li>
-                        </ul>
-                    </td>
-                </tr>
-
-                <!-- Open Space -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">Open Space</td>
-                    <td class="border border-black px-4 py-3">-</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 300.00/day</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>Electrical</li>
-                        </ul>
-                    </td>
-                </tr>
-
-                <!-- Track Oval -->
-                <tr class="hover:bg-gray-50">
-                    <td class="border border-black px-4 py-3 font-semibold">Track Oval</td>
-                    <td class="border border-black px-4 py-3">-</td>
-                    <td class="border border-black px-4 py-3 font-semibold text-blue-700">PhP 1,000.00/day</td>
-                    <td class="border border-black px-4 py-3">
-                        <ul class="list-disc list-inside text-xs leading-relaxed">
-                            <li>Maximum of 8hrs.</li>
-                        </ul>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="rt-grid">
+        @foreach ($venues as $venue)
+            @php $price = $splitRate($venue['rate']); @endphp
+            <article class="rt-card">
+                <div class="rt-media">
+                    @if ($venue['img'])
+                        <img src="{{ asset('img/facilities/' . $venue['img']) }}" alt="" loading="lazy">
+                    @else
+                        <div class="rt-ph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M9 10h.01M15 10h.01"/></svg></div>
+                    @endif
+                    <h3 class="rt-name">{{ $venue['name'] }}</h3>
+                </div>
+                <div class="rt-body">
+                    <div class="rt-price" aria-label="Rate: {{ $venue['rate'] }}">
+                        <span class="rt-cur">PhP</span>
+                        <span class="rt-amount">{{ $price['amount'] }}</span>
+                        <span class="rt-unit">{{ $price['unit'] }}</span>
+                    </div>
+                    <span class="rt-cap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0M16 4.5a3.5 3.5 0 010 7M21.5 20a6.5 6.5 0 00-4-6"/></svg>
+                        Capacity: {{ $venue['capacity'] }}
+                    </span>
+                    <ul class="rt-pack" aria-label="Facilities provided / package">
+                        @foreach ($venue['package'] as $item)
+                            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>{{ $item }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </article>
+        @endforeach
     </div>
 
     <!-- LED Wall Notice -->
-    <div class="mb-8 p-4 bg-yellow-50 border-l-4 border-yellow-500">
-        <p class="text-sm font-semibold text-gray-800">
-            <span class="text-yellow-700">Note:</span> LED Wall is excluded in the package and available for additional rental.
-        </p>
+    <div class="rt-note" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+        <p><strong>Note:</strong> LED Wall is excluded in the package and available for additional rental.</p>
     </div>
 
     <!-- Footer Signatories -->
-    <div class="grid grid-cols-2 gap-8 text-center text-sm text-gray-600 border-t pt-6">
-        <div>
-            <p class="font-semibold">Prepared by:</p>
-            <p class="mt-2">Administrative Officer III</p>
-        </div>
-        <div>
-            <p class="font-semibold">Noted by:</p>
-            <p class="mt-2">Administrative Officer V</p>
-        </div>
+    <div class="rt-sign">
+        <div><span>Prepared by</span><strong>Administrative Officer III</strong></div>
+        <div><span>Noted by</span><strong>Administrative Officer V</strong></div>
     </div>
 
-    <!-- Action Button -->
-    <div class="mt-8 text-center">
-        <a href="{{ route('guest.requests.facilities.create') }}" class="inline-block px-8 py-3 bg-black text-white rounded-md hover:bg-gray-800 font-semibold transition">
-            Book a Facility Now
-        </a>
+    <div class="rt-cta">
+        <div>
+            <h3>Found the right venue?</h3>
+            <p>Submit an application with your payment receipt and GSU will confirm it.</p>
+        </div>
+        <a href="{{ route('guest.requests.facilities.create') }}" class="pk-btn">Book a Facility Now</a>
     </div>
 </div>
 @endsection

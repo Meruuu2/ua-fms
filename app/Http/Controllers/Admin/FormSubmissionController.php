@@ -51,7 +51,8 @@ class FormSubmissionController extends Controller
         }
 
         // Sort: control number A-Z (pending requests first without control no), then by date
-        $submissions = $query->orderByRaw('CASE WHEN JSON_EXTRACT(payload, \'$.control_no\') IS NULL THEN 1 ELSE 0 END DESC, JSON_EXTRACT(payload, \'$.control_no\') ASC')
+        // Requests that still need a decision come first (pending, then payment to verify), then the rest; newest first in each group
+        $submissions = $query->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'pending_payment' THEN 1 WHEN 'approved' THEN 2 WHEN 'reserved' THEN 3 WHEN 'disapproved' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END")
             ->orderByDesc('created_at')
             ->paginate(15);
 

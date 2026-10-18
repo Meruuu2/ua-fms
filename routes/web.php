@@ -11,9 +11,6 @@ use App\Http\Controllers\College\FacilityController as CollegeFacilityController
 use App\Http\Controllers\College\FormController as CollegeFormController;
 use App\Http\Controllers\Org\DashboardController as OrgDashboardController;
 use App\Http\Controllers\Org\FormController as OrgFormController;
-use App\Http\Controllers\Guest\DashboardController as GuestDashboardController;
-use App\Http\Controllers\Guest\FormController as GuestFormController;
-use App\Http\Controllers\Guest\BookingController as GuestBookingController;
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GsuFormController;
@@ -35,6 +32,22 @@ Route::middleware(['auth'])->group(function () {
 // home route for viewer/general
 Route::get('/', [\App\Http\Controllers\PublicCalendarController::class, 'index'])
     ->name('home');
+
+// Landing page "Track a request": look up a facility ticket by its FM code + last name (read-only, rate-limited)
+Route::get('/track/ticket', [\App\Http\Controllers\TicketLookupController::class, 'show'])
+    ->middleware('throttle:20,1')
+    ->name('ticket.lookup');
+
+// Public facility request for guests (outsiders): no account, follow up with the ticket code
+Route::get('/request-facility', [\App\Http\Controllers\PublicFacilityRequestController::class, 'create'])
+    ->name('public.request.create');
+Route::post('/request-facility', [\App\Http\Controllers\PublicFacilityRequestController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('public.request.store');
+Route::get('/request-facility/submitted/{submission}', [\App\Http\Controllers\PublicFacilityRequestController::class, 'submitted'])
+    ->name('public.request.submitted');
+Route::view('/venue-rates', 'public.rates')->name('public.rates');
+Route::view('/guest-access', 'public.guest-access')->name('public.guest');
 
 
 
@@ -58,6 +71,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         ->name('admin.maintenance-tickets.show');
     Route::put('/admin/maintenance-tickets/{ticket}', [\App\Http\Controllers\Admin\MaintenanceTicketController::class, 'update'])
         ->name('admin.maintenance-tickets.update');
+    // Conversation with the college staff who sent the ticket (the page polls the GET route)
+    Route::get('/admin/maintenance-tickets/{ticket}/messages', [\App\Http\Controllers\Admin\MaintenanceTicketController::class, 'messages'])
+        ->name('admin.maintenance-tickets.messages');
+    Route::post('/admin/maintenance-tickets/{ticket}/messages', [\App\Http\Controllers\Admin\MaintenanceTicketController::class, 'sendMessage'])
+        ->middleware('throttle:30,1')
+        ->name('admin.maintenance-tickets.messages.store');
 
     // Facilities
     Route::get('/admin/facilities', [AdminFacilityController::class, 'index'])->name('admin.facilities.index');
@@ -97,6 +116,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('admin.users.index');
     Route::get('/admin/users/create', [\App\Http\Controllers\Admin\UserController::class, 'create'])->name('admin.users.create');
     Route::post('/admin/users', [\App\Http\Controllers\Admin\UserController::class, 'store'])->name('admin.users.store');
+    Route::get('/admin/users/{user}/edit', [\App\Http\Controllers\Admin\UserController::class, 'edit'])->name('admin.users.edit');
+    Route::put('/admin/users/{user}', [\App\Http\Controllers\Admin\UserController::class, 'update'])->name('admin.users.update');
+    Route::delete('/admin/users/{user}', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('admin.users.destroy');
 
     // Monthly Records
     Route::get('/admin/monthly-records', [AdminMonthlyRecordsController::class, 'index'])->name('admin.monthly-records.index');
@@ -135,6 +157,12 @@ Route::middleware(['auth', 'role:college_staff'])->group(function () {
         ->name('college.maintenance-tickets.store');
     Route::get('/college/maintenance-requests/{ticket}', [\App\Http\Controllers\College\MaintenanceTicketController::class, 'show'])
         ->name('college.maintenance-tickets.show');
+    // Conversation with the admins about this ticket (the page polls the GET route)
+    Route::get('/college/maintenance-requests/{ticket}/messages', [\App\Http\Controllers\College\MaintenanceTicketController::class, 'messages'])
+        ->name('college.maintenance-tickets.messages');
+    Route::post('/college/maintenance-requests/{ticket}/messages', [\App\Http\Controllers\College\MaintenanceTicketController::class, 'sendMessage'])
+        ->middleware('throttle:30,1')
+        ->name('college.maintenance-tickets.messages.store');
 
     // Facilities
     Route::get('/college/facilities', [CollegeFacilityController::class, 'index'])->name('college.facilities.index');
@@ -174,6 +202,14 @@ Route::middleware(['auth', 'role:college_staff'])->group(function () {
         '/college/requests/facilities/{submission}/cancel',
         [\App\Http\Controllers\College\FormController::class, 'cancelFacilities']
     )->name('college.requests.facilities.cancel');
+
+    // Team: college staff add accounts for their own college
+    Route::get('/college/users', [\App\Http\Controllers\College\UserController::class, 'index'])->name('college.users.index');
+    Route::get('/college/users/create', [\App\Http\Controllers\College\UserController::class, 'create'])->name('college.users.create');
+    Route::post('/college/users', [\App\Http\Controllers\College\UserController::class, 'store'])->name('college.users.store');
+    Route::get('/college/users/{user}/edit', [\App\Http\Controllers\College\UserController::class, 'edit'])->name('college.users.edit');
+    Route::put('/college/users/{user}', [\App\Http\Controllers\College\UserController::class, 'update'])->name('college.users.update');
+    Route::delete('/college/users/{user}', [\App\Http\Controllers\College\UserController::class, 'destroy'])->name('college.users.destroy');
 });
 
 // Org Staff
@@ -210,35 +246,15 @@ Route::middleware(['auth', 'role:org_staff'])->group(function () {
         '/org/requests/facilities/{submission}/cancel',
         [OrgFormController::class, 'cancelFacilities']
     )->name('org.requests.facilities.cancel');
+
+    // Team: org staff add accounts for their own organization
+    Route::get('/org/users', [\App\Http\Controllers\Org\UserController::class, 'index'])->name('org.users.index');
+    Route::get('/org/users/create', [\App\Http\Controllers\Org\UserController::class, 'create'])->name('org.users.create');
+    Route::post('/org/users', [\App\Http\Controllers\Org\UserController::class, 'store'])->name('org.users.store');
+    Route::get('/org/users/{user}/edit', [\App\Http\Controllers\Org\UserController::class, 'edit'])->name('org.users.edit');
+    Route::put('/org/users/{user}', [\App\Http\Controllers\Org\UserController::class, 'update'])->name('org.users.update');
+    Route::delete('/org/users/{user}', [\App\Http\Controllers\Org\UserController::class, 'destroy'])->name('org.users.destroy');
 });
 
-// Guest (External Users)
-Route::middleware(['auth', 'role:guest'])->group(function () {
-    Route::get('/guest/dashboard', [GuestDashboardController::class, 'index'])->name('guest.dashboard');
-
-    // Venue Rates
-    Route::get('/guest/rates', function () {
-        return view('guest.rates');
-    })->name('guest.rates');
-
-    // Bookings
-    Route::get('/guest/bookings', [GuestBookingController::class, 'index'])
-        ->name('guest.bookings.index');
-    Route::get('/guest/calendar', [GuestBookingController::class, 'calendar'])
-        ->name('guest.bookings.calendar');
-
-    // Facilities Utilization Form (Guest → GSU)
-    Route::get('/guest/requests/facilities', [GuestFormController::class, 'createFacilities'])
-        ->name('guest.requests.facilities.create');
-    Route::post('/guest/requests/facilities', [GuestFormController::class, 'storeFacilities'])
-        ->name('guest.requests.facilities.store');
-    Route::get('/guest/requests/facilities/index', [GuestFormController::class, 'indexFacilities'])
-        ->name('guest.requests.facilities.index');
-    Route::get('/guest/requests/facilities/{submission}', [GuestFormController::class, 'showFacilities'])
-        ->name('guest.requests.facilities.show');
-
-    Route::post(
-        '/guest/requests/facilities/{submission}/cancel',
-        [GuestFormController::class, 'cancelFacilities']
-    )->name('guest.requests.facilities.cancel');
-});
+// Guest (External Users): no account needed. The old guest portal is retired; its links go to the public form.
+Route::redirect('/guest/{any?}', '/request-facility')->where('any', '.*');

@@ -32,25 +32,10 @@ class FormController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Filter signatories by the user's organization
-        $presidents = Signatory::where('type', 'org_president')
-            ->where('is_active', true)
-            ->where('unit', $user->organization_name)
-            ->orderBy('name')
-            ->get();
-
-        $advisers = Signatory::where('type', 'org_adviser')
-            ->where('is_active', true)
-            ->where('unit', $user->organization_name)
-            ->orderBy('name')
-            ->get();
-
         return view('org.requests.facilities_create', compact(
             'coreFacilities',
-            'user',
-            'presidents',
-            'advisers'
-        ));;
+            'user'
+        ));
 
     }
 
@@ -64,18 +49,24 @@ class FormController extends Controller
     {
         $user = Auth::user();
 
-        $notedName = null;
-        if ($request->filled('noted_signatory_id') && $request->input('noted_signatory_id') !== 'custom') {
-            [$type, $id] = explode(':', $request->input('noted_signatory_id')) + [null, null];
-            if ($id) {
-                $signatory = Signatory::find($id);
-                if ($signatory) {
-                    $notedName = $signatory->name;
-                }
-            }
-        } elseif ($request->filled('noted_signatory_custom')) {
-            $notedName = $request->input('noted_signatory_custom');
-        }
+        // "Noted by" is required: a college Dean or Program Head (type their name), or someone else (type position + name)
+        $request->validate([
+            'noted_signatory_id'       => ['required', 'in:dean,program_head,custom'],
+            'noted_signatory_name'     => ['required', 'string', 'max:255'],
+            'noted_signatory_position' => ['nullable', 'required_if:noted_signatory_id,custom', 'string', 'max:120'],
+        ], [
+            'noted_signatory_id.required'          => 'Choose who will note your request: the Dean, a Program Head, or someone else.',
+            'noted_signatory_id.in'                => 'Choose who will note your request: the Dean, a Program Head, or someone else.',
+            'noted_signatory_name.required'        => 'Type the name of the person who will note your request.',
+            'noted_signatory_position.required_if' => 'Type the position of the person who will note your request.',
+        ]);
+
+        $notedName = trim((string) $request->input('noted_signatory_name'));
+        $notedPosition = match ($request->input('noted_signatory_id')) {
+            'dean'         => 'Dean',
+            'program_head' => 'Program Head',
+            default        => trim((string) $request->input('noted_signatory_position')),
+        };
 
         $notedDatetime = $notedName ? now()->format('Y-m-d H:i:s') : null;
 
@@ -92,8 +83,9 @@ class FormController extends Controller
 
         if ($submission) {
             $payload = $submission->payload ?? [];
-            $payload['noted_signatory_name'] = $notedName;
-            $payload['noted_datetime']       = $notedDatetime;
+            $payload['noted_signatory_name']     = $notedName;
+            $payload['noted_signatory_position'] = $notedPosition;
+            $payload['noted_datetime']           = $notedDatetime;
             $submission->payload = $payload;
             $submission->save();
         }

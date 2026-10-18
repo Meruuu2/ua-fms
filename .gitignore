@@ -26,3 +26,8 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Local AI tooling / browser test artifacts
+/.claude
+/.playwright-mcp
+/graphify-out

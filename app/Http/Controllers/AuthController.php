@@ -42,9 +42,43 @@ class AuthController extends Controller
         }
 
         app('cache')->forget($key);
+
+        // Each portal card on the landing page only lets its own accounts in
+        // (accounts created by a college/org head share that unit's role, so they follow the same rule)
+        $portal = (string) $request->input('portal', '');
+        if (isset(self::PORTALS[$portal]) && !$this->belongsToPortal(Auth::user(), $portal)) {
+            $home = collect(array_keys(self::PORTALS))->first(fn ($p) => $this->belongsToPortal(Auth::user(), $p));
+
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login', ['portal' => $portal])->withErrors([
+                'email' => 'This account can\'t sign in to the ' . self::PORTALS[$portal] . '.'
+                    . ($home ? ' Please use the ' . self::PORTALS[$home] . ' instead.' : ''),
+            ])->onlyInput('email');
+        }
+
         $request->session()->regenerate();
 
         return $this->redirectByRole(Auth::user());
+    }
+
+    /** Portal key (from the landing page cards) => name shown to the user. */
+    private const PORTALS = [
+        'admin'   => 'Admin Portal',
+        'college' => 'College Staff Portal',
+        'org'     => 'Org Unit Portal',
+    ];
+
+    protected function belongsToPortal($user, string $portal): bool
+    {
+        return match ($portal) {
+            'admin'   => $user->isAdmin(),
+            'college' => $user->isCollegeStaff(),
+            'org'     => $user->isOrgStaff(),
+            default   => false,
+        };
     }
 
     public function logout(Request $request)
@@ -70,8 +104,15 @@ class AuthController extends Controller
             return redirect()->route('org.dashboard');
         }
 
+        // Guests no longer sign in: they request facilities from the public form and track with their ticket code
         if ($user->isGuest()) {
-            return redirect()->route('guest.dashboard');
+            Auth::logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'email' => 'Guest accounts no longer sign in. You can request a facility from the home page — no account needed.',
+            ]);
         }
 
         // Fallback for invalid roles - log them out

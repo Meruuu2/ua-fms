@@ -1,163 +1,34 @@
 @extends('layouts.app')
 
+@section('title', 'Log In – UA Facility Management System')
+
+@section('main-content-class', 'w-full')
+
 @section('content')
-<style>
-    /* ── REFINED MONOCHROME LOGIN UI ── */
-
-    /* Full-screen centering container */
-    .login-page-wrapper {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-      padding: 24px;
-    }
-
-    .login-container {
-      width: 100%;
-      max-width: 440px;
-    }
-
-    /* Back Button Styling (Above the card) */
-    .back-link {
-      display: inline-flex;
-      align-items: center;
-      font-size: 14px;
-      color: #ffffff !important;
-      text-decoration: none;
-      margin-bottom: 24px;
-      transition: all 0.2s ease;
-      font-weight: 500;
-      background-color: #ffffff !important;
-      padding: 8px 16px;
-      border: 1px solid #E6E6E6;
-      border-radius: 4px;
-      box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
-    }
-
-    .back-link:hover {
-      background-color: #f9f9f9 !important;
-      border-color: #d4d4d4;
-      color: #ffffff !important;
-    }
-
-    /* Minimalist Card */
-    .login-card {
-      background: #ffffff;
-      padding: 60px 48px; /* Adjust based on image perception */
-      border: 1px solid #E6E6E6; /* Light gray border */
-      box-shadow: 0 10px 30px rgba(0,0,0,0.02);
-      box-sizing: border-box;
-    }
-
-    /* Typography */
-    .login-header {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-
-    .login-header h1 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 32px; /* Large, bold serif font */
-      font-weight: 400;
-      margin: 0 0 8px 0;
-      color: #111111;
-    }
-
-    /* "— Admin —" subtitle with line separators */
-    .login-admin-tag {
-      font-size: 14px;
-      color: #808080;
-      margin-bottom: 8px;
-      text-transform: uppercase; /* Match the visual */
-      letter-spacing: 0.1em; /* Add visual space */
-    }
-
-    .login-header p {
-      font-size: 14px;
-      color: #808080;
-      margin: 0;
-    }
-
-    /* Form Elements */
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: #111111;
-    }
-
-    /* Base form control style (Light Border) */
-    .form-control {
-      width: 100%;
-      padding: 12px 16px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      color: #111111;
-      background: #ffffff;
-      border: 1px solid #E6E6E6; /* Light gray border base */
-      box-sizing: border-box;
-      transition: all 0.2s ease;
-      outline: none;
-    }
-
-    .form-control:focus {
-      border-color: #111111;
-    }
-
-    /* Specific override to match input borders in the target image */
-    #email.form-control {
-      border: 1px solid #111111; /* Black border for Email */
-    }
-    #password.form-control {
-      border: 1px solid #E6E6E6; /* Light gray border for Password */
-    }
-
-    .login-btn {
-      width: 100%;
-      padding: 14px;
-      margin-top: 12px;
-      background-color: #111111;
-      color: #ffffff;
-      border: none;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.2s ease;
-    }
-
-    .login-btn:hover {
-      background-color: #333333;
-    }
-
-    /* Laravel Error Alert Styling */
-    .fms-alert-error {
-      background-color: #fff1f0;
-      border: 1px solid #ffa39e;
-      color: #cf1322;
-      padding: 12px;
-      font-size: 13px;
-      margin-bottom: 24px;
-      text-align: center;
-    }
-</style>
+@php
+    // Display-only label for the portal card the visitor clicked on the landing page
+    $portalLabels = [
+        'admin'   => 'Admin Portal',
+        'college' => 'College Staff Portal',
+        'org'     => 'Org Unit Portal',
+        'guest'   => 'Guest Access Portal',
+    ];
+    $portalLabel = $portalLabels[request('portal')] ?? 'Facility Management Portal';
+@endphp
 
 <div class="login-page-wrapper">
   <div class="login-container">
 
-    <a href="{{ url('/') }}" class="back-link">&#8592; Back to home</a>
+    <a href="{{ url('/') }}" class="home-return-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+      Back to home
+    </a>
 
     <div class="login-card">
       <div class="login-header">
+        <img src="{{ asset('img/facilities/UA-logo.png') }}" alt="University of Antique Logo" class="login-logo">
         <h1>Log In</h1>
-        <div class="login-admin-tag">Facility Management Portal</div>
+        <div class="login-admin-tag">{{ $portalLabel }}</div>
         <p>Use your assigned UA email and password to sign in.</p>
       </div>
 
@@ -167,6 +38,10 @@
 
       <form method="POST" action="{{ route('login.post') }}">
         @csrf
+        {{-- Which portal card was used, so only that portal's accounts can sign in here --}}
+        @if (in_array(request('portal'), ['admin', 'college', 'org'], true))
+          <input type="hidden" name="portal" value="{{ request('portal') }}">
+        @endif
 
         <div class="form-group">
           <label for="email">Email Address</label>
@@ -174,6 +49,7 @@
             id="email"
             type="email"
             name="email"
+            autocomplete="username"
             value="{{ old('email') }}"
             required
             autofocus
@@ -184,14 +60,21 @@
 
         <div class="form-group">
           <label for="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            name="password"
-            required
-            class="form-control"
-            placeholder="Enter your password"
-          >
+          <div class="password-field">
+            <input
+              id="password"
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              required
+              class="form-control"
+              placeholder="Enter your password"
+            >
+            <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false" aria-controls="password">
+              <svg class="icon-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6A17.4 17.4 0 0 0 2 12s3.5 7 10 7a9.8 9.8 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </button>
+          </div>
         </div>
 
         <button type="submit" class="login-btn">
@@ -202,5 +85,19 @@
     </div>
   </div>
 </div>
-@endsection
 
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const toggle = document.querySelector('.password-toggle');
+    const input = document.getElementById('password');
+    if (!toggle || !input) return;
+    toggle.addEventListener('click', function () {
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      toggle.setAttribute('aria-pressed', String(show));
+      toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      input.focus();
+    });
+  });
+</script>
+@endsection

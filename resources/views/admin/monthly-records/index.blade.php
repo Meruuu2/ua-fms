@@ -1,62 +1,109 @@
 @extends('layouts.admin')
 
-@section('content')
-<div class="fms-card">
-    <div class="fms-page-header">
-        <h1 class="fms-page-title">Monthly Records</h1>
-    </div>
+@section('admin-content')
+@php
+    $periodStart  = \Carbon\Carbon::create((int) $year, (int) $month, 1);
+    $prevPeriod   = $periodStart->copy()->subMonth();
+    $nextPeriod   = $periodStart->copy()->addMonth();
+    $bookingCount = $records->count();
+    $venuesUsed   = $venueSummary->filter(fn ($c) => $c > 0)->count();
+    $busiestVenue = $venueSummary->filter(fn ($c) => $c > 0)->sortDesc()->keys()->first();
+    $busiestCount = $busiestVenue ? $venueSummary[$busiestVenue] : 0;
+@endphp
 
-    <!-- Month/Year Filter -->
-    <div class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded">
-        <form method="GET" action="{{ route('admin.monthly-records.index') }}" class="flex items-center gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Month</label>
-                <select name="month" class="border border-gray-300 rounded px-3 py-2 text-sm">
-                    @foreach(range(1, 12) as $m)
-                        <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }}>
-                            {{ date('F', mktime(0, 0, 0, $m, 1)) }}
-                        </option>
-                    @endforeach
-                </select>
+<div class="records-page">
+    <section class="records-hero">
+        <div>
+            <p class="records-eyebrow">Monthly Records</p>
+            <div class="records-period">
+                <a class="records-step" href="{{ route('admin.monthly-records.index', ['month' => $prevPeriod->month, 'year' => $prevPeriod->year]) }}" aria-label="Previous month: {{ $prevPeriod->format('F Y') }}" title="{{ $prevPeriod->format('F Y') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                </a>
+                <h1>{{ $periodStart->format('F Y') }}</h1>
+                <a class="records-step" href="{{ route('admin.monthly-records.index', ['month' => $nextPeriod->month, 'year' => $nextPeriod->year]) }}" aria-label="Next month: {{ $nextPeriod->format('F Y') }}" title="{{ $nextPeriod->format('F Y') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+                </a>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Year</label>
-                <select name="year" class="border border-gray-300 rounded px-3 py-2 text-sm">
-                    @foreach(range(2024, 2030) as $y)
-                        <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="mt-6">
-                <button type="submit" class="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 text-sm font-medium">
-                    View Records
-                </button>
-            </div>
-        </form>
-    </div>
+            <p class="records-hero-sub">Facility bookings, equipment and rental fees for the month.</p>
+        </div>
+
+        <div class="records-tools">
+            <!-- Month/Year Filter -->
+            <form method="GET" action="{{ route('admin.monthly-records.index') }}" class="records-filter">
+                <div>
+                    <label for="records-month">Month</label>
+                    <select id="records-month" name="month">
+                        @foreach(range(1, 12) as $m)
+                            <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }}>
+                                {{ date('F', mktime(0, 0, 0, $m, 1)) }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="records-year">Year</label>
+                    <select id="records-year" name="year">
+                        @foreach(range(2024, 2030) as $y)
+                            <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <button type="submit">View</button>
+            </form>
+            <button type="button" onclick="window.print()" class="records-print">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg>
+                Print
+            </button>
+        </div>
+    </section>
+
+    <!-- Key figures -->
+    <section class="records-stats" aria-label="Key figures for {{ $periodStart->format('F Y') }}">
+        <div class="records-stat is-dark">
+            <p class="records-stat-label">Bookings</p>
+            <p class="records-stat-value">{{ $bookingCount }}</p>
+            <p class="records-stat-hint">Reserved this month</p>
+        </div>
+        <div class="records-stat">
+            <p class="records-stat-label">Rental fees</p>
+            <p class="records-stat-value">₱{{ number_format($totalRentalFees, 2) }}</p>
+            <p class="records-stat-hint">Total collected</p>
+        </div>
+        <div class="records-stat">
+            <p class="records-stat-label">Venues used</p>
+            <p class="records-stat-value">{{ $venuesUsed }}</p>
+            <p class="records-stat-hint">With at least one booking</p>
+        </div>
+        <div class="records-stat">
+            <p class="records-stat-label">Busiest venue</p>
+            <p class="records-stat-value is-text">{{ $busiestVenue ?? '—' }}</p>
+            <p class="records-stat-hint">{{ $busiestVenue ? $busiestCount . ' ' . \Illuminate\Support\Str::plural('booking', $busiestCount) : 'No bookings yet' }}</p>
+        </div>
+    </section>
 
     <!-- Records Table -->
-    <div class="overflow-x-auto mb-8">
-        <h2 class="text-lg font-semibold mb-4 uppercase">{{ date('F Y', mktime(0, 0, 0, $month, 1, $year)) }}</h2>
-
+    <div>
         <!-- Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <h2 class="records-section-title">Trends</h2>
+        <div class="records-charts">
             <!-- Monthly Trend Chart -->
-            <div class="bg-white border border-gray-300 rounded-lg p-6">
-                <h3 class="text-base font-semibold mb-4">Booking Trend (Last 12 Months)</h3>
-                <canvas id="monthlyTrendChart" height="200"></canvas>
+            <div class="records-card">
+                <h3>Booking Trend (Last 12 Months)</h3>
+                <div class="records-chart"><canvas id="monthlyTrendChart"></canvas></div>
             </div>
 
             <!-- Facility Usage Chart -->
-            <div class="bg-white border border-gray-300 rounded-lg p-6">
-                <h3 class="text-base font-semibold mb-4">Facility Usage ({{ date('F Y', mktime(0, 0, 0, $month, 1, $year)) }})</h3>
-                <canvas id="facilityUsageChart" height="200"></canvas>
+            <div class="records-card">
+                <h3>Facility Usage ({{ date('F Y', mktime(0, 0, 0, $month, 1, $year)) }})</h3>
+                <div class="records-chart"><canvas id="facilityUsageChart"></canvas></div>
             </div>
         </div>
 
+        <h2 class="records-section-title">Booking ledger</h2>
         @if($records->count() > 0)
+            <div class="records-table-wrap">
             <table class="w-full border-2 border-black text-xs">
-                <thead class="bg-gray-900 text-white">
+                <thead class="text-white u-bg-ink">
                     <tr>
                         <th class="border border-black px-2 py-2 text-left">Date Requested</th>
                         <th class="border border-black px-2 py-2 text-left">Date of Activity</th>
@@ -65,7 +112,7 @@
                         <th class="border border-black px-2 py-2 text-left">Requester</th>
                         <th class="border border-black px-2 py-2 text-left">Contact No.</th>
                         <th class="border border-black px-2 py-2 text-left">Venue</th>
-                        <th colspan="7" class="border border-black px-2 py-2 text-center bg-gray-800">Facilities to be Used (Quantity)</th>
+                        <th colspan="7" class="border border-black px-2 py-2 text-center u-bg-slate-800">Facilities to be Used (Quantity)</th>
                         <th class="border border-black px-2 py-2 text-right">Rental Fee</th>
                     </tr>
                     <tr>
@@ -114,82 +161,57 @@
                     </tr>
                 </tfoot>
             </table>
+            </div>
         @else
-            <div class="text-center py-12 text-gray-500">
+            <div class="records-empty">
                 <p>No bookings found for {{ date('F Y', mktime(0, 0, 0, $month, 1, $year)) }}</p>
             </div>
         @endif
     </div>
 
     <!-- Venue Usage Summary -->
-    <div class="mb-6">
-        <h3 class="text-lg font-semibold mb-4 uppercase">Summary of Venues/Facilities Utilized as of {{ date('F, Y', mktime(0, 0, 0, $month, 1, $year)) }}</h3>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            @php
-                $allVenues = [
-                    'Balay ni jUAn' => 0,
-                    'bUsAlian hall' => 0,
-                    'e-hub' => 0,
-                    'GrandStand/Track Oval' => 0,
-                    'ICT AVR' => 0,
-                    'CTE AVR' => 0,
-                    'CEA AVR' => 0,
-                    'New AVR' => 0,
-                    'New Female Dorm' => 0,
-                    'Paghiusa hall' => 0,
-                    'Tiripunan hall' => 0,
-                    'UA Hostel' => 0,
-                    'VIP Canteen' => 0,
-                    'Old/New Library' => 0,
-                    'Science Bldg.' => 0,
-                ];
+    <div>
+        <h3 class="records-section-title">Venues utilized · {{ date('F Y', mktime(0, 0, 0, $month, 1, $year)) }}</h3>
+        @php
+            $allVenues = [
+                'Balay ni jUAn' => 0,
+                'bUsAlian hall' => 0,
+                'e-hub' => 0,
+                'GrandStand/Track Oval' => 0,
+                'ICT AVR' => 0,
+                'CTE AVR' => 0,
+                'CEA AVR' => 0,
+                'New AVR' => 0,
+                'New Female Dorm' => 0,
+                'Paghiusa hall' => 0,
+                'Tiripunan hall' => 0,
+                'UA Hostel' => 0,
+                'VIP Canteen' => 0,
+                'Old/New Library' => 0,
+                'Science Bldg.' => 0,
+            ];
 
-                // Merge actual usage with all venues
-                foreach($venueSummary as $venue => $count) {
-                    $allVenues[$venue] = $count;
-                }
-            @endphp
-
-            @foreach($allVenues as $venue => $count)
-                <div class="border border-gray-300 rounded p-3 bg-white">
-                    <p class="text-sm font-semibold text-gray-700">{{ $venue }}</p>
-                    <p class="text-2xl font-bold {{ $count > 0 ? 'text-blue-600' : 'text-gray-400' }}">{{ $count }}</p>
+            // Merge actual usage with all venues
+            foreach($venueSummary as $venue => $count) {
+                $allVenues[$venue] = $count;
+            }
+            // Busiest first; unused venues keep their original order at the end
+            $rankedVenues = collect($allVenues)->sortByDesc(fn ($c) => $c);
+            $maxVenueCount = max(1, (int) $rankedVenues->max());
+        @endphp
+        <div class="records-venues">
+            @foreach($rankedVenues as $venue => $count)
+                <div class="records-venue {{ $count > 0 ? '' : 'is-unused' }}">
+                    <p class="records-venue-name" title="{{ $venue }}">{{ $venue }}</p>
+                    <p class="records-venue-count">{{ $count }}</p>
+                    <div class="records-venue-track" aria-hidden="true"><div class="records-venue-fill" style="width: {{ round($count / $maxVenueCount * 100) }}%"></div></div>
                 </div>
             @endforeach
         </div>
     </div>
 
-    <!-- Export/Print Actions -->
-    <div class="flex justify-end gap-3 pt-4 border-t">
-        <button onclick="window.print()" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm font-medium">
-            Print Records
-        </button>
-        <a href="{{ route('admin.dashboard') }}" class="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 text-sm font-medium">
-            Back to Dashboard
-        </a>
-    </div>
 </div>
 
-<style>
-@media print {
-    .fms-sidebar,
-    button,
-    form,
-    .border-t {
-        display: none !important;
-    }
-
-    .fms-card {
-        box-shadow: none !important;
-        border: none !important;
-    }
-
-    table {
-        font-size: 10px !important;
-    }
-}
-</style>
-@endsection
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
@@ -199,8 +221,11 @@ const monthlyTrendData = {
     datasets: [{
         label: 'Number of Bookings',
         data: @json(array_column($monthlyTrend, 'count')),
-        borderColor: '#000000',
-        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+        borderColor: '#0f172a',
+        backgroundColor: 'rgba(15, 23, 42, 0.08)',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: '#0f172a',
         tension: 0.3,
         fill: true
     }]
@@ -232,7 +257,6 @@ new Chart(document.getElementById('monthlyTrendChart'), {
 const facilityLabels = @json($venueSummary->keys()->toArray());
 const facilityCounts = @json($venueSummary->values()->toArray());
 
-const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16', '#06b6d4', '#a855f7', '#f43f5e', '#22c55e', '#eab308'];
 
 new Chart(document.getElementById('facilityUsageChart'), {
     type: 'bar',
@@ -241,9 +265,11 @@ new Chart(document.getElementById('facilityUsageChart'), {
         datasets: [{
             label: 'Number of Bookings',
             data: facilityCounts,
-            backgroundColor: colors.slice(0, facilityLabels.length),
-            borderColor: '#000000',
-            borderWidth: 1
+            backgroundColor: '#334155',
+            hoverBackgroundColor: '#0f172a',
+            borderRadius: { topLeft: 4, topRight: 4 },
+            borderSkipped: 'bottom',
+            maxBarThickness: 40
         }]
     },
     options: {
@@ -275,3 +301,4 @@ new Chart(document.getElementById('facilityUsageChart'), {
     }
 });
 </script>
+@endsection

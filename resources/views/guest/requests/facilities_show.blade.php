@@ -1,6 +1,6 @@
 @extends('layouts.guest')
 
-@section('content')
+@section('guest-content')
 <div class="bg-white rounded shadow p-6">
     <div class="mb-4">
         <a href="{{ route('guest.dashboard') }}" class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm font-medium transition">
@@ -72,7 +72,7 @@
 
         <div>
             <dt class="font-semibold text-gray-700">Date of Activity</dt>
-            <dd class="text-gray-800">{{ $payload['date_activity'] ?? '-' }}</dd>
+            <dd class="text-gray-800">{{ $payload['date_activity'] ?? '-' }}@if (!empty($payload['date_end'])) → {{ $payload['date_end'] }} <span class="text-gray-500">(multi-day, same time each day)</span>@endif</dd>
         </div>
         <div>
             <dt class="font-semibold text-gray-700">Time</dt>

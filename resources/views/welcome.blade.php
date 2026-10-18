@@ -5,521 +5,508 @@
 @section('main-content-class', 'w-full')
 
 @section('content')
-<style>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&display=swap" rel="stylesheet">
 
+@php
+  // "Next on the calendar": soonest reservation from today on, from the same month data the calendar below shows
+  $todayStart = now()->startOfDay();
+  $upcoming = collect($days ?? [])
+      ->flatMap(fn ($bookings, $date) => collect($bookings)->map(fn ($b) => ['date' => \Carbon\Carbon::parse($date), 'booking' => $b]))
+      ->filter(fn ($x) => $x['date']->gte($todayStart))
+      ->sortBy(fn ($x) => $x['date']->timestamp * 10000 + (int) optional($x['booking']->start_time)->format('Hi'))
+      ->values();
+  $nextUp = $upcoming->first();
+  $nextTime = $nextUp
+      ? trim(optional($nextUp['booking']->start_time)->format('g:i A') . (optional($nextUp['booking']->end_time) ? ' – ' . $nextUp['booking']->end_time->format('g:i A') : ''), ' –')
+      : '';
+@endphp
 
-/* ── DESIGN SYSTEM TOKENS (Strict Monochrome Palette) ── */
-:root{
-  --primary:#111111;
-  --primary-dark:#000000;
-  --primary-light:#E0E0E0;
-  --bg:#ffffff;
-  --bg2:#FAFAFA;
-  --bg3:#F5F5F5;
-  --text:#111111;
-  --text2:#4D4D4D;
-  --text3:#808080;
-  --border:#CCCCCC;
-  --border2:#E6E6E6;
-  --sans:'DM Sans',sans-serif;
-  --display:'DM Serif Display',serif;
-  --r-sm:4px;
-  --r-md:8px;
-  --r-lg:12px;
-  --r-xl:16px;
-  --shadow-xs:0 1px 2px rgba(0,0,0,.05);
-  --shadow-sm:0 2px 8px rgba(0,0,0,.07);
-  --shadow-md:0 4px 16px rgba(0,0,0,.1);
-}
+<div class="ua-landing ul">
 
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration:none}
-input,select,textarea,button{font-family:inherit}
+{{-- HERO: the seal's crimson field, campus photos inside the seal's gold triangle --}}
+<section class="ul-hero" aria-labelledby="ul-hero-title">
+  <div class="ul-hero-copy">
+    <h1 class="ul-hero-title" id="ul-hero-title">Reserve a venue at the <span>University of Antique</span>.</h1>
+    <p class="ul-hero-lead">See what&rsquo;s already scheduled, request a hall or ground, and follow your ticket until GSU confirms it. Guests don&rsquo;t need an account.</p>
+    <div class="ul-hero-actions">
+      <a href="{{ route('public.guest') }}" class="ul-btn ul-btn--gold">
+        Request a facility
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <a href="#calendar" class="ul-btn ul-btn--line">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+        View schedule
+      </a>
+      <a href="#track" class="ul-hero-link">Track a request</a>
+    </div>
+    <p class="ul-hero-by">
+      <img src="{{ asset('img/facilities/UA-logo.png') }}" alt="" width="36" height="36">
+      <span>Facility Management System<small>General Services Unit &middot; Sibalom, Antique</small></span>
+    </p>
+  </div>
 
-/* ── UNIFIED MAIN HEADER (Matches Image 2 Structure) ── */
-.main-header{background:var(--primary);color:#fff;padding:0 48px;height:80px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-sm)}
-.header-left{display:flex;align-items:center;gap:16px}
-.header-logo{width:54px;height:54px;object-fit:contain}
-.header-titles{display:flex;flex-direction:column;justify-content:center}
-.ht-uni{font-family:var(--display);font-size:22px;line-height:1.1;letter-spacing:0.5px}
-.ht-sys{font-size:12px;color:#ccc;font-weight:500;margin-top:2px;letter-spacing:0.3px;text-transform:uppercase}
+  <div class="ul-hero-art">
+    <div class="ul-tri" aria-hidden="true">
+      <span class="ul-tri-gold"></span>
+      <div class="ul-tri-photo ua-hero-slides">
+        <div class="ua-hero-slide is-active" style="background-image: url('{{ asset('img/facilities/busalian-hall.jpg') }}')"><span class="ul-slide-cap">Busalian Hall</span></div>
+        <div class="ua-hero-slide" style="background-image: url('{{ asset('img/facilities/grand-stand.jpg') }}')"><span class="ul-slide-cap">Grandstand</span></div>
+        <div class="ua-hero-slide" style="background-image: url('{{ asset('img/facilities/paghiusa-hall.jpg') }}')"><span class="ul-slide-cap">Paghiusa Hall</span></div>
+      </div>
+    </div>
 
-.header-right{display:flex;align-items:center;gap:32px}
-.nav-links{display:flex;gap:24px}
-.nav-link{font-size:13px;color:#ccc;cursor:pointer;transition:color .15s;font-weight:500}
-.nav-link:hover{color:#fff}
-.nav-actions{display:flex;gap:10px;align-items:center}
-.btn-ghost{padding:7px 16px;border:1px solid rgba(255,255,255,0.4);border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:#fff;transition:all .15s}
-.btn-ghost:hover{background:rgba(255,255,255,0.1);border-color:#fff}
-.btn-solid{padding:7px 18px;border:1px solid #fff;border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:var(--primary);transition:all .15s}
-.btn-solid:hover{background:#e6e6e6}
+    <div class="ul-next">
+      <p class="ul-next-label"><i aria-hidden="true"></i>Next on the calendar</p>
+      @if ($nextUp)
+        <p class="ul-next-date">{{ $nextUp['date']->isToday() ? 'Today' : $nextUp['date']->format('D, M j') }}</p>
+        <p class="ul-next-meta">{{ $nextUp['booking']->facilities->pluck('name')->join(', ') ?: 'Facility' }}@if ($nextTime) &middot; {{ $nextTime }}@endif</p>
+        <a href="#calendar" class="ul-next-more">{{ $upcoming->count() === 1 ? '1 upcoming reservation' : $upcoming->count() . ' upcoming reservations' }} this month</a>
+      @else
+        <p class="ul-next-date">Dates are open</p>
+        <p class="ul-next-meta">No upcoming reservations this month yet.</p>
+        <a href="#calendar" class="ul-next-more">Open the calendar</a>
+      @endif
+    </div>
 
-/* ── AUTH BAR ── */
-.auth-bar{background:var(--bg2);border-bottom:1px solid var(--border2);padding:8px 48px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text)}
-.auth-bar a{color:var(--primary);font-weight:600;margin-left:12px;text-decoration:underline}
-
-/* ── HERO SECTION (Static, No Carousel) ── */
-.hero-section{position:relative;width:100%;height:320px;background:#fff;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border2);padding:0 48px}
-.hero-content{text-align:center;max-width:640px}
-.hero-content h1{font-family:var(--display);color:var(--primary);font-size:42px;font-weight:400;line-height:1.2;margin-bottom:12px}
-.hero-content p{color:var(--text2);font-size:16px;line-height:1.6}
-
-/* ── HERO CAROUSEL (White Background, Black Text) ── */
-.hero-carousel{position:relative;width:100%;height:460px;background:#fff;overflow:hidden;border-bottom:1px solid var(--border2)}
-.slide{position:absolute;top:0;left:0;width:100%;height:100%;background-size:cover;background-position:center;opacity:0;filter:grayscale(100%)}
-.slide.active{opacity:1}
-.hero-overlay{position:absolute;bottom:0;left:0;width:100%;padding:120px 48px 40px;background:linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%);display:flex;flex-direction:column;pointer-events:none}
-.hero-overlay h2{font-family:var(--display);color:#fff;font-size:36px;font-weight:400;line-height:1.1;margin-bottom:6px}
-.hero-overlay p{color:#ccc;font-size:15px;letter-spacing:0.5px}
-
-/* ── FEATURES ── */
-.section{
-  padding: 60px 48px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-.section-head{text-align:center;margin-bottom:42px}
-.section-head h2{font-family:var(--display);font-size:28px;font-weight:400;margin-bottom:10px}
-.section-head p{font-size:14px;color:var(--text2);line-height:1.75}
-.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-@media(max-width:768px){.feat-grid{grid-template-columns:1fr}}
-.feat-card{background:#fff;border:1px solid var(--border2);border-radius:var(--r-xl);padding:24px;box-shadow:var(--shadow-xs);transition:box-shadow .2s,transform .2s}
-.feat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
-.feat-ico{width:44px;height:44px;border-radius:var(--r-md);background:var(--bg3);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
-.feat-ico svg{width:22px;height:22px;stroke:var(--primary);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-.feat-card h3{font-size:14px;font-weight:600;margin-bottom:7px}
-.feat-card p{font-size:12px;color:var(--text2);line-height:1.7}
-
-/* ── STATS BAND ── */
-.stats-band{background:var(--bg3);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);padding:48px}
-.stats-inner{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;max-width:760px;margin:0 auto;text-align:center}
-@media(max-width:640px){.stats-inner{grid-template-columns:repeat(2,1fr)}}
-.stat-num{font-family:var(--display);font-size:34px;font-weight:400;color:var(--primary);margin-bottom:6px}
-.stat-lbl{font-size:12px;color:var(--text2);font-weight:600;letter-spacing:.3px;text-transform:uppercase}
-
-/* ── STRICT MONOCHROME PORTRAIT PORTAL SECTION ── */
-.ua-portal-section {
-}
-
-.ua-portal-grid {
-  display: grid;
-  grid-template-columns: 0.9fr 1.1fr; /* Adjusts width ratio so cards aren't squished */
-  gap: 64px; /* Increases the space between the text and the cards */
-  align-items: start; /* FIX: Aligns text to the top instead of floating in the center */
-}
-
-@media (max-width: 992px) {
-  .ua-portal-grid {
-    grid-template-columns: 1fr;
-    gap: 40px;
-  }
-}
-
-/* Left Content: Text fixed to the side */
-.ua-text-column {
-  padding-top: 8px; /* Slight nudge to visually align with the top of the cards */
-}
-
-.ua-text-column h2 {
-  font-family: var(--display, 'DM Serif Display', serif);
-  font-size: 38px;
-  color: var(--primary); /* Strict Black */
-  margin-bottom: 16px;
-  font-weight: 400;
-  line-height: 1.1;
-}
-
-.ua-text-column p {
-  font-size: 14.5px;
-  color: var(--text2); /* Gray */
-  line-height: 1.8;
-  text-align: left; /* Makes the paragraph look cleaner like a block */
-}
-
-/* Right Content: 4 Portrait Cards */
-.ua-portrait-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-@media (max-width: 768px) {
-  .ua-portrait-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 480px) {
-  .ua-portrait-cards {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Portrait Rectangle Card Styling */
-.ua-portrait-card {
-  background: #ffffff;
-  border: 1px solid var(--border);
-  padding: 32px 16px 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  text-align: center;
-  text-decoration: none;
-  color: var(--text);
-  min-height: 240px;
-  transition: all 0.2s ease;
-}
-
-.ua-portrait-card:hover {
-  border-color: var(--primary);
-  background: var(--bg2);
-}
-
-.ua-card-text h3 {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--primary);
-}
-
-.ua-card-text p {
-  font-size: 11px;
-  color: var(--text3);
-  line-height: 1.5;
-}
-
-/* Simplest Plain Text Login Button */
-.ua-simple-btn {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--primary);
-  border-bottom: 1px solid var(--primary);
-  padding-bottom: 2px;
-  align-self: center;
-  margin-top: 24px;
-  transition: opacity 0.2s;
-}
-
-.ua-portrait-card:hover .ua-simple-btn {
-  opacity: 0.6;
-}
-
-/* ── FACILITIES ── */
-/* ── STRICT MONOCHROME FACILITIES GRID ── */
-/* ── STRICT MONOCHROME FACILITIES GRID ── */
-/* ── MINIMALIST HORIZONTAL RECTANGLE FACILITIES GRID ── */
-.ua-facilities-section {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.ua-section-header {
-  margin-bottom: 32px;
-  padding: 0 4px;
-}
-
-.ua-section-header h2 {
-  font-family: var(--display, 'DM Serif Display', serif);
-  font-size: 32px;
-  color: var(--primary);
-  margin-bottom: 8px;
-  font-weight: 400;
-}
-
-.ua-section-header p {
-  font-size: 14px;
-  color: var(--text2);
-}
-
-/* Crisp 3-column layout that naturally scales */
-.ua-facilities-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px; /* Uniform, balanced space between cards */
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Tablet view transitions smoothly to 2 columns */
-@media (max-width: 992px) {
-  .ua-facilities-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Mobile view stacks into clean full-width rows */
-@media (max-width: 640px) {
-  .ua-facilities-grid {
-    grid-template-columns: 1fr;
-  }
-  .ua-facilities-section {
-    padding: 40px 16px;
-  }
-}
-
-/* Normal Landscape Rectangle Card Style */
-.ua-facility-card {
-  background: #ffffff;
-  border: 1px solid var(--border);
-  padding: 24px; /* Balanced interior padding */
-  box-sizing: border-box;
-  transition: all 0.15s ease-in-out;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start; /* FIX: Left-aligns text for the classic rectangle look */
-  justify-content: flex-start;
-  text-align: left;        /* FIX: Left-aligned minimalist text */
-}
-
-.ua-facility-card:hover {
-  border-color: var(--primary); /* Turns black on hover */
-  background: var(--bg2);
-}
-
-/* Facility Name Styling */
-.ua-facility-card h4 {
-  font-size: 13.5px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--primary);
-  letter-spacing: 0.5px;
-  margin: 0 0 8px 0; /* Tight, crisp spacing directly above description */
-}
-
-/* Facility Description Styling */
-.ua-facility-desc {
-  font-size: 12px;
-  color: var(--text2);
-  line-height: 1.5;
-  margin: 0;
-}
-
-@media (max-width: 868px) {
-  .ua-facilities-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 540px) {
-  .ua-facilities-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Individual Text-Only Facility Card */
-.ua-facility-card {
-  background: #ffffff;
-  border: 1px solid var(--border);
-  padding: 32px 24px; /* Increased padding for breathing room without images */
-  transition: all 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  min-height: 140px; /* Keeps all cards uniformly sized */
-}
-
-.ua-facility-card:hover {
-  border-color: var(--primary); /* Turns black on hover */
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-
-/* Facility Name Styling */
-.ua-facility-card h4 {
-  font-size: 14px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--primary);
-  letter-spacing: 0.5px;
-  margin: 0 0 10px 0;
-}
-
-/* Facility Description Styling */
-.ua-facility-desc {
-  font-size: 12px;
-  color: var(--text2);
-  line-height: 1.6;
-  margin: 0;
-}
-
-/* ── FOOTER ── */
-.footer{background:var(--primary);padding:32px 48px;color:#fff;display:grid;grid-template-columns:1fr 1fr;gap:32px}
-.footer-left img{width:48px;margin-bottom:12px;filter:brightness(0) invert(1)}
-.footer h4{font-family:var(--display);font-size:16px;margin-bottom:6px}
-.footer p{font-size:11px;color:#ccc;line-height:1.5}
-.footer-right{text-align:right}
-.footer-bottom{grid-column:1/-1;border-top:1px solid #333;padding-top:16px;margin-top:16px;display:flex;justify-content:space-between;font-size:10px;color:#999}
-</style>
-
-{{-- HERO CAROUSEL --}}
-<div class="hero-carousel">
-  <div class="slide active" style="background-image: url('{{ asset('img/facilities/busalian-hall.jpg') }}')"></div>
-  <div class="slide" style="background-image: url('{{ asset('img/facilities/grand-stand.jpg') }}')"></div>
-  <div class="slide" style="background-image: url('{{ asset('img/facilities/paghiusa-hall.jpg') }}')"></div>
-
-  <div class="hero-overlay">
-    <div style="max-width: 1040px; margin: 0 auto;">
-      <h2>University of Antique</h2>
-      <p>Facility Management System</p>
+    <div class="ua-hero-dots ul-dots" role="tablist" aria-label="Choose photo">
+      <button type="button" class="ua-hero-dot is-active" role="tab" aria-selected="true" aria-label="Busalian Hall"></button>
+      <button type="button" class="ua-hero-dot" role="tab" aria-selected="false" aria-label="Grandstand"></button>
+      <button type="button" class="ua-hero-dot" role="tab" aria-selected="false" aria-label="Paghiusa Hall"></button>
     </div>
   </div>
-</div>
+</section>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const slides = document.querySelectorAll('.hero-carousel .slide');
-  let currentSlide = 0;
+document.addEventListener('DOMContentLoaded', function () {
+  const slides = document.querySelectorAll('.ua-hero-slide');
+  const dots = document.querySelectorAll('.ua-hero-dot');
+  if (slides.length < 2) return;
+  let current = 0, timer;
 
-  setInterval(() => {
-    slides[currentSlide].classList.remove('active');
-    currentSlide = (currentSlide + 1) % slides.length;
-    slides[currentSlide].classList.add('active');
-  }, 4000); // Change slide every 4 seconds
+  function show(i) {
+    slides[current].classList.remove('is-active');
+    dots[current].classList.remove('is-active');
+    dots[current].setAttribute('aria-selected', 'false');
+    current = i;
+    slides[current].classList.add('is-active');
+    dots[current].classList.add('is-active');
+    dots[current].setAttribute('aria-selected', 'true');
+  }
+  function start() { clearInterval(timer); timer = setInterval(() => show((current + 1) % slides.length), 6000); }
+
+  dots.forEach((dot, i) => dot.addEventListener('click', () => { show(i); start(); }));
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) start();
 });
 </script>
 
-<div class="ua-portal-section" id="about">
-  <div class="ua-portal-grid">
+{{-- WELCOME + SIGN IN --}}
+<section class="ul-welcome" id="about">
+  <div class="ul-welcome-copy">
+    <h2>Kruhay Bambuhay!</h2>
+    <p>
+      Welcome to the University of Antique Facility Management System. The General Services Unit (GSU)
+      is committed to providing top-tier logistical support, preventive maintenance, and administrative assistance
+      across campus facilities. Our services ensure that physical spaces, venue reservations, and event systems
+      run seamlessly to promote a productive academic and communal life for all internal organizational units
+      and college personnel.
+    </p>
+    <a class="ul-text-link" href="{{ route('public.rates') }}">See venue rates
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
+  </div>
 
-    <div class="ua-text-column">
-      <h2>Kruhay Bambuhay!</h2>
-      <p>
-        Welcome to the University of Antique Facility Management System. The General Services Unit (GSU)
-        is committed to providing top-tier logistical support, preventive maintenance, and administrative assistance
-        across campus facilities. Our services ensure that physical spaces, venue reservations, and event systems
-        run seamlessly to promote a productive academic and communal life for all internal organizational units
-        and college personnel.
-      </p>
+  <div class="ul-doors">
+    <h3 class="ul-doors-title">Staff sign in</h3>
+    <div class="ua-portrait-cards ul-cards">
+      <a href="{{ route('login', ['portal' => 'admin']) }}" class="ua-portrait-card">
+        <div class="ua-card-top">
+          <span class="ua-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <span class="ua-card-index" aria-hidden="true">01</span>
+        </div>
+        <h4>Admin Login</h4>
+        <div class="ua-card-text">
+          <p>System configuration &amp; general services controls</p>
+        </div>
+        <span class="ua-simple-btn">Log In <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <a href="{{ route('login', ['portal' => 'college']) }}" class="ua-portrait-card">
+        <div class="ua-card-top">
+          <span class="ua-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-5 9 5-9 5-9-5z"/><path d="M7 11.2V16c0 1.1 2.2 2.5 5 2.5s5-1.4 5-2.5v-4.8"/><path d="M21 9v5"/></svg></span>
+          <span class="ua-card-index" aria-hidden="true">02</span>
+        </div>
+        <h4>College Staff</h4>
+        <div class="ua-card-text">
+          <p>Departmental venue reservations &amp; access</p>
+        </div>
+        <span class="ua-simple-btn">Log In <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <a href="{{ route('login', ['portal' => 'org']) }}" class="ua-portrait-card">
+        <div class="ua-card-top">
+          <span class="ua-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2c2.9.4 5 2.8 5 5.8"/></svg></span>
+          <span class="ua-card-index" aria-hidden="true">03</span>
+        </div>
+        <h4>Org Unit</h4>
+        <div class="ua-card-text">
+          <p>Student org requests &amp; event scheduling</p>
+        </div>
+        <span class="ua-simple-btn">Log In <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
     </div>
 
-    <div class="ua-portrait-cards">
+    {{-- Guests don't sign in: the Guest Access page explains the process, then leads to the request form --}}
+    <a href="{{ route('public.guest') }}" class="ul-guest">
+      <span class="ul-guest-text">
+        <strong>Not university staff?</strong>
+        <span>Guests &amp; partner organizations can book a venue, then track it with a ticket code. No account needed.</span>
+      </span>
+      <span class="ul-guest-go">Start request <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+  </div>
+</section>
 
-      <a href="{{ route('login') }}" class="ua-portrait-card">
-        <div class="ua-card-text">
-          <h3>Admin<br>Login</h3>
-          <p>System configuration & general services controls</p>
-        </div>
-        <span class="ua-simple-btn">Log In</span>
-      </a>
-
-      <a href="{{ route('login') }}" class="ua-portrait-card">
-        <div class="ua-card-text">
-          <h3>College<br>Staff</h3>
-          <p>Departmental venue reservations & access</p>
-        </div>
-        <span class="ua-simple-btn">Log In</span>
-      </a>
-
-      <a href="{{ route('login') }}" class="ua-portrait-card">
-        <div class="ua-card-text">
-          <h3>Org<br>Unit</h3>
-          <p>Student org requests & event scheduling</p>
-        </div>
-        <span class="ua-simple-btn">Log In</span>
-      </a>
-
-      <a href="{{ route('login') }}" class="ua-portrait-card">
-        <div class="ua-card-text">
-          <h3>Guest<br>Access</h3>
-          <p>External users & partner organization bookings</p>
-        </div>
-        <span class="ua-simple-btn">Log In</span>
-      </a>
-
+{{-- TICKET TRACKER --}}
+<section class="ua-track-section" id="track" aria-labelledby="ua-track-title">
+  <div class="ua-track-inner">
+    <div class="ua-track-copy">
+      <h2 id="ua-track-title">Searching for your ticket?</h2>
+      <p>Choose the ticket type, then type your code and last name to see where your request stands — no log in needed.</p>
     </div>
 
-  </div>
-</div>
-
-{{-- PUBLIC CALENDAR (wrapped existing calendar blade in a div) --}}
-<div id="calendar" style="margin-top: 40px;">
-    @include('public.calendar')
-</div>
-
-
-
-
-
-{{-- FACILITIES --}}
-<div class="ua-facilities-section" id="facilities">
-  <div class="ua-section-header">
-    <h2>Key Facilities</h2>
-    <p>Core venues and spaces available through the University of Antique Facility Management System.</p>
-  </div>
-
-  <div class="ua-facilities-grid">
-
-    <div class="ua-facility-card">
-      <h4>E-Hub</h4>
-    <p class="ua-facility-desc">Modern digital innovation center equipped with workstations for tech events and workshops.</p>
-  </div>
-
-  <div class="ua-facility-card">
-    <h4>Paghiusa Hall</h4>
-    <p class="ua-facility-desc">A large audio-visual hall ideal for university-wide seminars and major presentations.</p>
-  </div>
-
-  <div class="ua-facility-card">
-    <h4>Tiripunan Hall</h4>
-    <p class="ua-facility-desc">A versatile gathering space designed for student organization meetings and collaborative activities.</p>
-  </div>
-
-  <div class="ua-facility-card">
-    <h4>Busalian Hall</h4>
-    <p class="ua-facility-desc">The main multi-purpose hall for large assemblies, graduations, and formal ceremonies.</p>
-  </div>
-
-  <div class="ua-facility-card">
-    <h4>CIT AVR</h4>
-    <p class="ua-facility-desc">Dedicated audio-visual room for the College of Industrial Technology's lectures and defenses.</p>
-  </div>
-
-  <div class="ua-facility-card">
-    <h4>CBA AVR</h4>
-    <p class="ua-facility-desc">Premier audio-visual facility for the College of Business Administration's seminars and conferences.</p>
-  </div>
-
-  <div class="ua-facility-card">
-    <h4>Grandstand</h4>
-    <p class="ua-facility-desc">Open-air seating and field area for university sports events, intramurals, and outdoor gatherings.</p>
-  </div>
-
-  <div class="ua-facility-card">
-    <h4>Balay ni Juan</h4>
-    <p class="ua-facility-desc">A cultural and heritage venue suited for intimate gatherings, art exhibits, and special receptions.</p>
-  </div>
-
-  <div class="ua-facility-card">
-    <h4>New AVR</h4>
-    <p class="ua-facility-desc">Newly upgraded audio-visual room featuring state-of-the-art projection and sound systems.</p>
+    <form class="ua-track-form" id="ua-track-form" novalidate data-endpoint="{{ route('ticket.lookup') }}" role="search" aria-label="Ticket status">
+      <div class="ua-track-bar">
+        <div class="ua-track-seg ua-track-seg--type" data-for="ua-track-type">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          <div class="ua-track-seg-text">
+            <label for="ua-track-type">Ticket type</label>
+            <div class="ua-track-select">
+              <select id="ua-track-type" name="type">
+                <option value="FM" title="Facility request">Facility (FM)</option>
+                <option value="RM" title="Repair &amp; maintenance">Repair (RM)</option>
+              </select>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="ua-track-seg" data-for="ua-track-code">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3a2 2 0 000-4z"/></svg>
+          <div class="ua-track-seg-text">
+            <label for="ua-track-code">Ticket code</label>
+            <input id="ua-track-code" name="code" type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="24" placeholder="FM-2026-00123" aria-describedby="ua-track-code-err">
+          </div>
+        </div>
+        <div class="ua-track-seg" data-for="ua-track-last">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
+          <div class="ua-track-seg-text">
+            <label for="ua-track-last">Last name</label>
+            <input id="ua-track-last" name="last_name" type="text" autocomplete="family-name" maxlength="60" placeholder="Dela Cruz" aria-describedby="ua-track-last-err">
+          </div>
+        </div>
+        <button type="submit" class="ua-track-submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          Check status
+        </button>
+      </div>
+      <div class="ua-track-errors">
+        <span aria-hidden="true"></span>
+        <p class="ua-track-error" id="ua-track-code-err" aria-live="polite"></p>
+        <p class="ua-track-error" id="ua-track-last-err" aria-live="polite"></p>
+      </div>
+      <div class="ua-track-meta">
+        <ul class="ua-track-legend" data-kind="FM" aria-label="Facility request statuses">
+          <li style="--dot:#F59E0B">Pending</li>
+          <li style="--dot:#34D399">Approved</li>
+          <li style="--dot:#60A5FA">Reserved</li>
+          <li style="--dot:#F87171">Disapproved</li>
+          <li style="--dot:#94A3B8">Cancelled</li>
+        </ul>
+        <ul class="ua-track-legend" data-kind="RM" aria-label="Repair ticket statuses" hidden>
+          <li style="--dot:#94A3B8">Notified</li>
+          <li style="--dot:#F59E0B">Pending</li>
+          <li style="--dot:#60A5FA">Ongoing</li>
+          <li style="--dot:#34D399">Success</li>
+          <li style="--dot:#F87171">Failed</li>
+        </ul>
+        <p class="ua-track-hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+          <span id="ua-track-hint-text">Facility tickets start with <code>FM</code> — find yours on your request confirmation.</span>
+        </p>
+      </div>
+    </form>
   </div>
 
-</div>
+  {{-- Result pop-up --}}
+  <dialog class="ua-track-dialog" id="ua-track-dialog" aria-labelledby="ua-tr-status">
+    <div class="ua-tr-top">
+      <button type="button" class="ua-tr-close" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="ua-tr-badge" id="ua-tr-badge" aria-hidden="true"></div>
+      <p class="ua-tr-code" id="ua-tr-code"></p>
+      <h3 class="ua-tr-status" id="ua-tr-status"></h3>
+      <span class="ua-tr-pill" id="ua-tr-pill"></span>
+      <p class="ua-tr-msg" id="ua-tr-msg"></p>
+    </div>
+    <div class="ua-tr-body">
+      <dl class="ua-tr-details" id="ua-tr-details"></dl>
+      <div class="ua-tr-actions">
+        <button type="button" class="ua-tr-secondary" data-close autofocus>Search again</button>
+        <a href="#calendar" class="ua-tr-primary" data-close data-kind="FM">View calendar</a>
+        <button type="button" class="ua-tr-primary" data-close data-kind="RM" hidden>Done</button>
+      </div>
+    </div>
+  </dialog>
+</section>
+
+<script>
+(function () {
+  const form = document.getElementById('ua-track-form');
+  const dialog = document.getElementById('ua-track-dialog');
+  if (!form || !dialog) return;
+  const codeInput = document.getElementById('ua-track-code');
+  const lastInput = document.getElementById('ua-track-last');
+  const typeSelect = document.getElementById('ua-track-type');
+  const $ = (id) => document.getElementById(id);
+
+  const icons = {
+    clock:  '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    check:  '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>',
+    play:   '<circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/>',
+    swap:   '<path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="M7 21l-4-4 4-4"/><path d="M21 17H3"/>',
+    x:      '<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M8 11h6"/>',
+    plug:   '<path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 01-12 0z"/><path d="M12 17v5"/>',
+    bell:   '<path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 003.4 0"/>',
+    wrench: '<path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'
+  };
+  // Status sets per ticket type. FM = facility request, RM = repair & maintenance.
+  const common = {
+    notfound: { label: 'No match found', tone: '#475569', bg: '#F1F5F9', icon: 'search', msg: 'We couldn’t find a ticket with that code and last name. Check both and try again.' },
+    busy:     { label: 'Too many searches', tone: '#475569', bg: '#F1F5F9', icon: 'clock', msg: 'Please wait a minute, then try again.' },
+    offline:  { label: 'Lookup not available yet', tone: '#475569', bg: '#F1F5F9', icon: 'plug', msg: 'Online status tracking isn’t connected yet. Sign in to your portal to see your request, or contact the GSU office.' }
+  };
+  const kinds = {
+    FM: {
+      name: 'Facility request', example: 'FM-2026-00123',
+      hint: 'Facility tickets start with <code>FM</code> — find yours on your request confirmation.',
+      states: {
+        pending:     { title: 'Waiting for review', label: 'Pending', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'Your request was received and is waiting for GSU review.' },
+        pending_payment: { title: 'Payment being verified', label: 'Pending payment', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'GSU is checking your payment receipt before reviewing the request.' },
+        reserved:    { title: 'Venue reserved', label: 'Reserved', tone: '#1D4ED8', bg: '#EFF6FF', icon: 'check', msg: 'Your venue is reserved and on the calendar. See you there!' },
+        disapproved: { title: 'Request not approved', label: 'Disapproved', tone: '#B91C1C', bg: '#FEF2F2', icon: 'x', msg: 'GSU did not approve this request. Sign in to your portal for details, or contact the GSU office.' },
+        approved:    { title: 'Approved by GSU', label: 'Approved', tone: '#047857', bg: '#ECFDF5', icon: 'check', msg: 'Good news — your request was approved. GSU will confirm the final reservation on the calendar.' },
+        ongoing:     { title: 'In progress', label: 'Ongoing', tone: '#1D4ED8', bg: '#EFF6FF', icon: 'play', msg: 'Your request is approved and being processed for your schedule.' },
+        rescheduled: { title: 'Moved to a new schedule', label: 'Rescheduled', tone: '#4338CA', bg: '#EEF2FF', icon: 'swap', msg: 'Your booking was moved to a new date or time. Check the details below.' },
+        cancelled:   { title: 'Request cancelled', label: 'Cancelled', tone: '#475569', bg: '#F1F5F9', icon: 'x', msg: 'This request was cancelled. Submit a new request if you still need the venue.' }
+      }
+    },
+    RM: {
+      name: 'Repair & maintenance', example: 'RM-20261019-AB12CD',
+      hint: 'Repair tickets start with <code>RM</code> — find yours on your repair request.',
+      states: {
+        notified: { title: 'Admins notified', label: 'Notified', tone: '#475569', bg: '#F1F5F9', icon: 'bell', msg: 'Your repair request reached the facility administrators and is waiting to be scheduled.' },
+        pending:  { title: 'Waiting to start', label: 'Pending', tone: '#B45309', bg: '#FFFBEB', icon: 'clock', msg: 'Your repair is queued and will start once a team is assigned.' },
+        ongoing:  { title: 'Repair in progress', label: 'Ongoing', tone: '#1D4ED8', bg: '#EFF6FF', icon: 'wrench', msg: 'The maintenance team is working on it now.' },
+        success:  { title: 'Repair completed', label: 'Success', tone: '#047857', bg: '#ECFDF5', icon: 'check', msg: 'The repair was completed successfully.' },
+        failed:   { title: 'Repair not completed', label: 'Failed', tone: '#B91C1C', bg: '#FEF2F2', icon: 'x', msg: 'The repair couldn’t be completed. GSU will contact you about next steps, or you can send a new request.' }
+      }
+    }
+  };
+
+  // Shows the pop-up. result: { kind?: 'FM'|'RM', status, code, venue?, date?, time?, subject?, sent? }
+  window.uaShowTicketResult = function (result) {
+    const kind = kinds[result.kind] ? result.kind : typeSelect.value;
+    const isStatus = !!kinds[kind].states[result.status];
+    const s = kinds[kind].states[result.status] || common[result.status] || common.notfound;
+    dialog.style.setProperty('--tone', s.tone);
+    dialog.style.setProperty('--tone-bg', s.bg);
+    $('ua-tr-badge').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + icons[s.icon] + '</svg>';
+    $('ua-tr-code').textContent = result.code || '';
+    $('ua-tr-status').textContent = isStatus ? s.title : s.label;
+    $('ua-tr-pill').textContent = s.label;
+    $('ua-tr-pill').hidden = !isStatus;
+    $('ua-tr-msg').textContent = s.msg;
+    const rows = (kind === 'RM'
+      ? [['Facility', result.venue], ['Subject', result.subject], ['Sent', result.sent]]
+      : [['Venue', result.venue], ['Date', result.date], ['Time', result.time]]).filter(r => r[1]);
+    dialog.querySelectorAll('.ua-tr-actions [data-kind]').forEach(el => { el.hidden = el.dataset.kind !== kind; });
+    const dl = $('ua-tr-details');
+    dl.innerHTML = '';
+    rows.forEach(function (r) {
+      const div = document.createElement('div');
+      const dt = document.createElement('dt'); dt.textContent = r[0];
+      const dd = document.createElement('dd'); dd.textContent = r[1];
+      div.append(dt, dd); dl.append(div);
+    });
+    dl.hidden = rows.length === 0;
+    if (!dialog.open) dialog.showModal();
+  };
+
+  function setError(input, errId, text) {
+    $(errId).textContent = text;
+    input.setAttribute('aria-invalid', text ? 'true' : 'false');
+    input.closest('.ua-track-seg').classList.toggle('is-invalid', !!text);
+    return !text;
+  }
+  form.querySelectorAll('.ua-track-seg').forEach(function (seg) {
+    seg.addEventListener('click', function (e) { if (!['INPUT', 'SELECT'].includes(e.target.tagName)) $(seg.dataset.for).focus(); });
+  });
+
+  function applyKind() {
+    const k = kinds[typeSelect.value];
+    codeInput.placeholder = k.example;
+    $('ua-track-hint-text').innerHTML = k.hint;
+    form.querySelectorAll('.ua-track-legend').forEach(ul => { ul.hidden = ul.dataset.kind !== typeSelect.value; });
+    if (codeInput.getAttribute('aria-invalid') === 'true') setError(codeInput, 'ua-track-code-err', '');
+  }
+  typeSelect.addEventListener('change', function () { applyKind(); codeInput.focus(); });
+  applyKind();
+
+  codeInput.addEventListener('input', function () {
+    codeInput.value = codeInput.value.toUpperCase().replace(/\s+/g, '');
+    if (codeInput.getAttribute('aria-invalid') === 'true') setError(codeInput, 'ua-track-code-err', '');
+  });
+  lastInput.addEventListener('input', function () {
+    if (lastInput.getAttribute('aria-invalid') === 'true') setError(lastInput, 'ua-track-last-err', '');
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const code = codeInput.value.trim().toUpperCase();
+    const last = lastInput.value.trim();
+    const kind = typeSelect.value, k = kinds[kind];
+    const codeOk = setError(codeInput, 'ua-track-code-err',
+      !code ? 'Enter your ticket code.' : (!new RegExp('^' + kind + '[-A-Z0-9]{3,}$').test(code) ? k.name + ' tickets start with ' + kind + ', e.g. ' + k.example + '.' : ''));
+    const lastOk = setError(lastInput, 'ua-track-last-err', !last ? 'Enter your last name.' : '');
+    if (!codeOk) { codeInput.focus(); return; }
+    if (!lastOk) { lastInput.focus(); return; }
+
+    // The lookup endpoint isn't built yet (UI only). When it exists, set data-endpoint on the form.
+    const endpoint = form.dataset.endpoint;
+    if (!endpoint) { window.uaShowTicketResult({ kind: kind, status: 'offline', code: code }); return; }
+    fetch(endpoint + '?' + new URLSearchParams({ type: kind, code: code, last_name: last }), { headers: { Accept: 'application/json' } })
+      .then(r => r.ok ? r.json() : (r.status === 429 ? { status: 'busy' } : { status: 'notfound' }))
+      .then(data => window.uaShowTicketResult(Object.assign({ kind: kind, code: code }, data)))
+      .catch(() => window.uaShowTicketResult({ kind: kind, status: 'offline', code: code }));
+  });
+
+  let refocus = true;
+  dialog.addEventListener('click', function (e) {
+    const closer = e.target.closest('[data-close]');
+    if (e.target === dialog || closer) {
+      refocus = !(closer && closer.tagName === 'A'); // "View calendar" scrolls away, so don't pull focus back
+      dialog.close();
+    }
+  });
+  dialog.addEventListener('close', function () { if (refocus) codeInput.focus({ preventScroll: true }); refocus = true; });
+})();
+</script>
+
+{{-- KEY FACILITIES --}}
+@php
+  $keyFacilities = [
+    ['name' => 'Busalian Hall',  'img' => 'busalian-hall.jpg',  'desc' => 'The main multi-purpose hall for large assemblies, graduations, and formal ceremonies.'],
+    ['name' => 'Paghiusa Hall',  'img' => 'paghiusa-hall.jpg',  'desc' => 'A large audio-visual hall ideal for university-wide seminars and major presentations.'],
+    ['name' => 'Tiripunan Hall', 'img' => 'tiripunan-hall.jpg', 'desc' => 'A versatile gathering space designed for student organization meetings and collaborative activities.'],
+    ['name' => 'Grandstand',     'img' => 'grand-stand.jpg',    'desc' => 'Open-air seating and field area for university sports events, intramurals, and outdoor gatherings.'],
+    ['name' => 'New AVR',        'img' => 'new-avr.jpg',        'desc' => 'Newly upgraded audio-visual room featuring state-of-the-art projection and sound systems.'],
+    ['name' => 'E-Hub',          'img' => null,                 'desc' => 'Modern digital innovation center equipped with workstations for tech events and workshops.'],
+    ['name' => 'CIT AVR',        'img' => null,                 'desc' => "Dedicated audio-visual room for the College of Industrial Technology's lectures and defenses."],
+    ['name' => 'CBA AVR',        'img' => null,                 'desc' => "Premier audio-visual facility for the College of Business Administration's seminars and conferences."],
+    ['name' => 'Balay ni Juan',  'img' => null,                 'desc' => 'A cultural and heritage venue suited for intimate gatherings, art exhibits, and special receptions.'],
+  ];
+  // Venues without a photo get a panel in one of the seal's colours
+  $sealTones = ['green', 'blue', 'gold', 'crimson'];
+@endphp
+<section class="ua-facilities-section ul-venues" id="facilities" aria-labelledby="ul-venues-title">
+  <div class="ul-section-head">
+    <div>
+      <h2 id="ul-venues-title">Key Facilities</h2>
+      <p>Core venues and spaces available through the University of Antique Facility Management System.</p>
+    </div>
+    <a class="ul-text-link" href="{{ route('public.rates') }}">Venue rates
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
+  </div>
+
+  <div class="ua-fac-carousel">
+    <button type="button" class="ua-fac-arrow ua-fac-prev" aria-label="Previous facilities">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+
+    <div class="ua-fac-track">
+      @foreach ($keyFacilities as $i => $facility)
+        <article class="ua-fac-card">
+          <div class="ua-fac-media">
+            @if ($facility['img'])
+              <img src="{{ asset('img/facilities/' . $facility['img']) }}" alt="{{ $facility['name'] }}" loading="lazy">
+            @else
+              <div class="ul-fac-tone is-{{ $sealTones[$i % count($sealTones)] }}">
+                <span class="ul-fac-initial" aria-hidden="true">{{ \Illuminate\Support\Str::of($facility['name'])->explode(' ')->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->join('') }}</span>
+                <span class="ul-fac-soon">Photo coming soon</span>
+              </div>
+            @endif
+          </div>
+          <div class="ua-fac-body">
+            <h3>{{ $facility['name'] }}</h3>
+            <p class="ua-fac-desc">{{ $facility['desc'] }}</p>
+          </div>
+        </article>
+      @endforeach
+    </div>
+
+    <button type="button" class="ua-fac-arrow ua-fac-next" aria-label="Next facilities">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
+
+  @if (($unavailableFacilities ?? collect())->isNotEmpty())
+    <p class="ul-venues-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      <span>Not available right now:
+        @foreach ($unavailableFacilities as $f)
+          <strong>{{ $f->name }}</strong> ({{ $f->availability_status === 'maintenance' ? 'under maintenance' : 'unavailable' }}){{ $loop->last ? '' : ',' }}
+        @endforeach
+      </span>
+    </p>
+  @endif
+</section>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    const slides = document.querySelectorAll('.hero-carousel .slide');
-    let current = 0;
-
-    if (!slides.length) return;
-
-    // Ensure only the first slide is active initially
-    slides.forEach((s, i) => s.classList.toggle('active', i === 0));
-
-    if (slides.length === 1) return; // nothing to rotate
-
-    setInterval(() => {
-      slides[current].classList.remove('active');
-      current = (current + 1) % slides.length;
-      slides[current].classList.add('active');
-    }, 5000); // 5 seconds
+    const track = document.querySelector('.ua-fac-track');
+    if (!track) return;
+    const carousel = track.parentElement;
+    const prev = carousel.querySelector('.ua-fac-prev');
+    const next = carousel.querySelector('.ua-fac-next');
+    const page = () => track.clientWidth + parseFloat(getComputedStyle(track).columnGap || 0);
+    const update = () => {
+      prev.disabled = track.scrollLeft <= 4;
+      next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 4;
+    };
+    prev.addEventListener('click', () => track.scrollBy({ left: -page() }));
+    next.addEventListener('click', () => track.scrollBy({ left: page() }));
+    track.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
   });
 </script>
 
+{{-- PUBLIC CALENDAR (the shared partial; the request form also reads its markup) --}}
+<section class="ua-calendar-section ul-schedule" aria-labelledby="ul-schedule-title">
+  <div class="ul-section-head">
+    <div>
+      <h2 id="ul-schedule-title">Reservation Schedule</h2>
+      <p>Public calendar of approved and scheduled facility reservations. All times are in Philippine Standard Time.</p>
+    </div>
+    <ul class="ul-cal-key" aria-label="Calendar key">
+      <li><i class="is-today"></i>Today</li>
+      <li><i class="is-booked"></i>Has reservations</li>
+    </ul>
+  </div>
+  @include('public.calendar', ['hideCalendarHeading' => true])
+</section>
+
+</div>
 @endsection

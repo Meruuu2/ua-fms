@@ -12,6 +12,7 @@ class MaintenanceTicket extends Model
     protected $fillable = [
         'ticket_code',
         'facility_id',
+        'facility_other',
         'requester_id',
         'booking_id',
         'request_method',
@@ -43,6 +44,17 @@ class MaintenanceTicket extends Model
     public function booking()
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    public function messages()
+    {
+        return $this->hasMany(MaintenanceTicketMessage::class)->orderBy('id');
+    }
+
+    /** Success / Failed tickets are closed: their conversation is read-only. */
+    public function isClosed(): bool
+    {
+        return in_array($this->status, ['success', 'failed'], true);
     }
 
     public function staffAssignments()

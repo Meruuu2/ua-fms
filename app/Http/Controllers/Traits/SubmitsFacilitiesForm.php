@@ -41,6 +41,8 @@ trait SubmitsFacilitiesForm
             'requester_name'  => $user->name,
             'requester_unit'  => $this->requesterUnit(),
             'date_activity'   => $validated['date_activity'],
+            // Last day of a multi-day event; null for single-day requests
+            'date_end'        => (!empty($validated['date_end']) && $validated['date_end'] !== $validated['date_activity']) ? $validated['date_end'] : null,
             'time_range'      => [
                 'start' => $validated['start_time'],
                 'end'   => $validated['end_time'],

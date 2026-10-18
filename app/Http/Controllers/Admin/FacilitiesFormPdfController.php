@@ -199,8 +199,12 @@ class FacilitiesFormPdfController extends Controller
         // Remove the temp DOCX file
         @unlink($docxPath);
 
+        // Display inline so the PDF opens in the browser's viewer instead of downloading
         return response()
-            ->download($pdfPath, $baseName . '.pdf', ['Content-Type' => 'application/pdf'])
+            ->file($pdfPath, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $baseName . '.pdf"',
+            ])
             ->deleteFileAfterSend(true);
     }
 }

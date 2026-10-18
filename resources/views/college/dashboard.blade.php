@@ -1,153 +1,131 @@
 @extends('layouts.college')
 
 @section('college-content')
-    <div class="fms-card">
-        <div class="fms-page-header border-0 pb-0 mb-6">
-            <h1 class="fms-page-title">College Staff Dashboard</h1>
-        </div>
-        <p class="mb-6 text-sm text-neutral-600">
-            Manage your college facilities, bookings, and requests from the sidebar.
-        </p>
+@include('layouts.partials.page-kit')
+@php
+    $now      = \Carbon\Carbon::now();
+    $hour     = (int) $now->format('G');
+    $greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good evening');
+    $user     = auth()->user();
+    $college  = optional($user)->college_name ?: 'Your college';
 
-        <!-- Statistics Charts -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <!-- Facilities Requests Chart (3D Pie Chart) -->
-            <div class="bg-neutral-50 border border-neutral-200 rounded-lg p-6">
-                <h3 class="text-base font-semibold mb-4">My Facilities Requests</h3>
-                <div class="relative" style="height: 300px;">
-                    <div id="facilitiesChart3D"></div>
-                </div>
-                <div class="mt-4 text-sm text-neutral-600">
-                    <p>Total Requests: <strong>{{ $facilitiesStats['total'] }}</strong></p>
-                </div>
+    // Request journey: the order a facility request moves through
+    $journey = [
+        ['key' => 'pending',         'label' => 'Pending',         'hint' => 'Waiting for GSU review',  'icon' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'],
+        ['key' => 'approved',        'label' => 'Approved',        'hint' => 'Cleared by GSU',          'icon' => '<path d="M20 6L9 17l-5-5"/>'],
+        ['key' => 'reserved',        'label' => 'Reserved',        'hint' => 'On the calendar',         'icon' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/>'],
+    ];
+
+    $repairRows = [
+        ['label' => 'Pending',     'count' => $maintenanceStats['pending'] ?? 0],
+        ['label' => 'Notified',    'count' => $maintenanceStats['notified'] ?? 0],
+        ['label' => 'In progress', 'count' => $maintenanceStats['in_progress'] ?? 0],
+        ['label' => 'Completed',   'count' => $maintenanceStats['completed'] ?? 0],
+        ['label' => 'Rejected',    'count' => $maintenanceStats['rejected'] ?? 0],
+    ];
+    $repairMax = max(1, collect($repairRows)->max('count'));
+@endphp
+
+<div class="pk-page">
+    <section class="pk-hero" style="--pk-img: url('{{ asset('img/facilities/paghiusa-hall.jpg') }}')">
+        <div>
+            <p class="pk-eyebrow">{{ $now->format('l, F j, Y') }}</p>
+            <h1>{{ $greeting }}, {{ optional($user)->name ?? 'there' }}</h1>
+            <p class="pk-hero-sub">Manage your college facilities, bookings, and requests from one place.</p>
+            <div class="cd-hero-meta">
+                <span class="cd-chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/></svg>
+                    {{ $college }}
+                </span>
+                <span class="cd-chip">{{ $facilitiesStats['total'] }} {{ \Illuminate\Support\Str::plural('request', $facilitiesStats['total']) }} · {{ $maintenanceStats['total'] }} repair {{ \Illuminate\Support\Str::plural('ticket', $maintenanceStats['total']) }}</span>
             </div>
-
-            <!-- Maintenance Tickets Chart -->
-            <div class="bg-neutral-50 border border-neutral-200 rounded-lg p-6">
-                <h3 class="text-base font-semibold mb-4">My Repair Requests</h3>
-                <div class="relative" style="height: 250px;">
-                    <canvas id="maintenanceChart"></canvas>
-                </div>
-                <div class="mt-4 text-sm text-neutral-600">
-                    <p>Total Tickets: <strong>{{ $maintenanceStats['total'] }}</strong></p>
-                </div>
-            </div>
         </div>
-
-        <h2 class="mb-3 text-sm font-semibold uppercase tracking-widest text-neutral-500">Quick access</h2>
-        <div class="fms-stat-grid">
-            <a href="{{ route('college.facilities.index') }}" class="fms-stat-card">
-                <h3>My facilities</h3>
-                <p>View and manage facilities owned by your college</p>
+        <div class="pk-hero-actions">
+            <a href="{{ route('college.requests.facilities.create') }}" class="pk-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                New request
             </a>
-            <a href="{{ route('college.bookings.index') }}" class="fms-stat-card">
-                <h3>Bookings</h3>
-                <p>Review booking requests for your facilities</p>
-            </a>
-            <a href="{{ route('college.requests.facilities.create') }}" class="fms-stat-card">
-                <h3>Utilization request</h3>
-                <p>Submit a facilities utilization request to GSU</p>
+            <a href="{{ route('college.calendar') }}" class="pk-btn-ghost">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+                Calendar
             </a>
         </div>
+    </section>
+
+    <div class="pk-section-head">
+        <h2 class="pk-section-title">My facility requests</h2>
+        <a href="{{ route('college.requests.index') }}" class="pk-section-meta pk-section-link">View all →</a>
     </div>
+    <section class="cd-journey is-3" aria-label="Facility requests by status">
+        @foreach ($journey as $i => $step)
+            @php $count = $facilitiesStats[$step['key']] ?? 0; @endphp
+            <div class="cd-step {{ $count > 0 ? 'is-lit' : '' }}">
+                <div class="cd-step-top">
+                    <span class="cd-step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $step['icon'] !!}</svg></span>
+                    <span class="cd-step-num">STEP {{ $i + 1 }}</span>
+                </div>
+                <p class="cd-step-value">{{ $count }}</p>
+                <p class="cd-step-label">{{ $step['label'] }}</p>
+                <p class="cd-step-hint">{{ $step['hint'] }}</p>
+            </div>
+        @endforeach
+        <div class="cd-step is-off">
+            <div class="cd-step-top">
+                <span class="cd-step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg></span>
+            </div>
+            <p class="cd-step-value">{{ $facilitiesStats['disapproved'] }}</p>
+            <p class="cd-step-label">Disapproved</p>
+            <p class="cd-step-hint">Not approved by GSU</p>
+        </div>
+    </section>
 
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <script>
-    // Facilities Requests 3D Pie Chart using Plotly
-    const facilitiesData = [{
-        values: [
-            {{ $facilitiesStats['pending'] }},
-            {{ $facilitiesStats['pending_payment'] }},
-            {{ $facilitiesStats['approved'] }},
-            {{ $facilitiesStats['reserved'] }},
-            {{ $facilitiesStats['disapproved'] }}
-        ],
-        labels: ['Pending', 'Pending Payment', 'Approved', 'Reserved', 'Disapproved'],
-        type: 'pie',
-        marker: {
-            colors: [
-                '#FCD34D', // Yellow - Pending
-                '#FB923C', // Orange - Pending Payment
-                '#34D399', // Green - Approved
-                '#60A5FA', // Blue - Reserved
-                '#F87171'  // Red - Disapproved
-            ],
-            line: {
-                color: '#fff',
-                width: 2
-            }
-        },
-        hole: 0,
-        pull: [0, 0.05, 0, 0, 0],
-        textinfo: 'label+percent',
-        textposition: 'outside',
-        automargin: true
-    }];
+    <div class="cd-grid">
+        <section class="cd-card" aria-label="Repair requests by status">
+            <div class="cd-card-head">
+                <h3>My Repair Requests</h3>
+                <a href="{{ route('college.maintenance-tickets.index') }}">View tickets →</a>
+            </div>
+            <div class="cd-repair">
+                @foreach ($repairRows as $row)
+                    <div class="cd-repair-row {{ $row['count'] > 0 ? '' : 'is-zero' }}">
+                        <span class="cd-repair-label">{{ $row['label'] }}</span>
+                        <span class="cd-repair-track" aria-hidden="true"><span class="cd-repair-fill" style="width: {{ round($row['count'] / $repairMax * 100) }}%"></span></span>
+                        <span class="cd-repair-count">{{ $row['count'] }}</span>
+                    </div>
+                @endforeach
+            </div>
+            <div class="cd-card-foot">Total Tickets: <strong>{{ $maintenanceStats['total'] }}</strong></div>
+        </section>
 
-    const facilitiesLayout = {
-        height: 300,
-        margin: { t: 20, b: 20, l: 20, r: 20 },
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
-        showlegend: true,
-        legend: {
-            orientation: 'h',
-            y: -0.2,
-            x: 0.5,
-            xanchor: 'center'
-        }
-    };
-
-    const facilitiesConfig = {
-        responsive: true,
-        displayModeBar: false
-    };
-
-    Plotly.newPlot('facilitiesChart3D', facilitiesData, facilitiesLayout, facilitiesConfig);
-
-    // Maintenance Tickets Chart (Bar Chart)
-    const maintenanceCtx = document.getElementById('maintenanceChart').getContext('2d');
-    new Chart(maintenanceCtx, {
-        type: 'bar',
-        data: {
-            labels: ['Pending', 'Notified', 'In Progress', 'Completed', 'Rejected'],
-            datasets: [{
-                label: 'Number of Tickets',
-                data: [
-                    {{ $maintenanceStats['pending'] }},
-                    {{ $maintenanceStats['notified'] }},
-                    {{ $maintenanceStats['in_progress'] }},
-                    {{ $maintenanceStats['completed'] }},
-                    {{ $maintenanceStats['rejected'] }}
-                ],
-                backgroundColor: [
-                    '#FCD34D', // Yellow - Pending
-                    '#60A5FA', // Blue - Notified
-                    '#FB923C', // Orange - In Progress
-                    '#34D399', // Green - Completed
-                    '#F87171'  // Red - Rejected
-                ],
-                borderWidth: 1,
-                borderColor: '#1a1a1a'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
-        }
-    });
-    </script>
+        <section class="cd-card" aria-label="Quick access">
+            <div class="cd-card-head"><h3>Quick access</h3></div>
+            <div class="cd-actions">
+                <a href="{{ route('college.requests.facilities.create') }}" class="cd-action">
+                    <span class="cd-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6M12 12v6M9 15h6"/></svg></span>
+                    <span><strong>Utilization request</strong><span class="cd-action-sub">Submit a request to GSU</span></span>
+                </a>
+                <a href="{{ route('college.requests.index') }}" class="cd-action">
+                    <span class="cd-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span>
+                    <span><strong>My requests</strong><span class="cd-action-sub">Track request status</span></span>
+                </a>
+                <a href="{{ route('college.bookings.index') }}" class="cd-action">
+                    <span class="cd-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></span>
+                    <span><strong>Reservations</strong><span class="cd-action-sub">Your confirmed bookings</span></span>
+                </a>
+                <a href="{{ route('college.facilities.index') }}" class="cd-action">
+                    <span class="cd-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg></span>
+                    <span><strong>My facilities</strong><span class="cd-action-sub">Facilities owned by your college</span></span>
+                </a>
+                <a href="{{ route('college.maintenance-tickets.create') }}" class="cd-action">
+                    <span class="cd-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4 2.5-2.5z"/></svg></span>
+                    <span><strong>Report a repair</strong><span class="cd-action-sub">Send a maintenance ticket</span></span>
+                </a>
+                <a href="{{ route('college.calendar') }}" class="cd-action">
+                    <span class="cd-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+                    <span><strong>Reservation calendar</strong><span class="cd-action-sub">See what's booked</span></span>
+                </a>
+            </div>
+        </section>
+    </div>
+</div>
 @endsection

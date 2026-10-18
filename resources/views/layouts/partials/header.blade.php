@@ -8,9 +8,11 @@
     </div>
     <div class="header-right">
         <nav class="nav-links">
-            <a class="nav-link" href="#facilities">Facilities</a>
-            <a class="nav-link" href="#calendar">Schedule</a>
-            <a class="nav-link" href="#about">About</a>
+            <a class="nav-link" href="{{ route('home') }}#facilities">Facilities</a>
+            <a class="nav-link" href="{{ route('home') }}#calendar">Schedule</a>
+            <a class="nav-link" href="{{ route('public.guest') }}">Guest access</a>
+            <a class="nav-link" href="{{ route('public.rates') }}">Venue rates</a>
+            <a class="nav-link" href="{{ route('home') }}#about">About</a>
         </nav>
         <div class="nav-actions">
             @auth
@@ -25,7 +27,7 @@
                                 : 'home'));
                 @endphp
                 <a href="{{ route($dashRoute) }}" class="btn-ghost">Dashboard</a>
-                <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+                <form class="u-inline" method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="btn-solid">Sign out</button>
                 </form>
