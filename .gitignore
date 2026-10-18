@@ -31,3 +31,4 @@ Thumbs.db
 /.claude
 /.playwright-mcp
 /graphify-out
+/.mcp.json
