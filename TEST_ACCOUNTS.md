@@ -42,13 +42,15 @@ It now creates the following accounts:
 
 It also still creates one generic test user via `User::factory()` and the official facilities list via `FacilitySeeder`.
 
-> **Note (2026-10-19):** most of these sample accounts were deleted from the local database through Admin → Users. Admin A is still there but its email was changed to `adminA@gsuadmin.com` (see 1b). Deleting an account also deletes its bookings, requests and repair tickets. Run `php artisan db:seed` to bring the sample accounts back (their old records are not restored).
+> **Note (2026-10-19, my local database only):** most of these sample accounts were deleted from my local database through Admin → Users. Admin A is still there but its email was changed to `adminA@gsuadmin.com` (see 1b). Deleting an account also deletes its bookings, requests and repair tickets. Run `php artisan db:seed` to bring the sample accounts back (their old records are not restored).
 
 ---
 
-## 1b. Accounts created in the app (local database)
+## 1b. Accounts created in the app (my local database only)
 
-Created or edited through the portals, not by the seeder. Each portal only accepts its own accounts: use the matching card on the home page (Admin / College Staff / Org Unit). Last checked against the local database on 2026-10-19.
+> **These accounts exist only in my local database.** They were created through the portals, not by the seeder, so they are not in the code or in git. If you cloned or forked this repo, these logins will not work for you; use the sample accounts in section 1 after running `php artisan db:seed`.
+
+Each portal only accepts its own accounts: use the matching card on the home page (Admin / College Staff / Org Unit). Last checked against the local database on 2026-10-19.
 
 ### Admins (Admin team)
 - `adminA@gsuadmin.com` / `password123` → AdminA, position `GSU Head`, contact `0990-990-9090` *(seeded as `adminA@example.com`; email changed in the app)*
